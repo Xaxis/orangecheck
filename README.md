@@ -47,7 +47,7 @@ Verification is correspondingly austere. A relying service fetches the claim, ch
 
 Revocation is automatic and irrevocable. The moment the owner spends the coins, or a deep re-organisation erases them, the next `gettxout` call returns nothing, and every verifier in the world simultaneously recognises the badge has evaporated. There are no blacklists to update, no support channels to petition, and no guardians to persuade. Liveness equals coin-ness: when the value moves, the identity dies, and the cost of resurrection is the cost of a brand-new stake.
 
-In four sentences: lock bitcoin; bind it, in public, to a name; let the network itself guarantee both authenticity and weight; and allow the ordinary act of spending to wipe the slate clean. This is the entirety of the Orange Check protocol.
+_In four sentences: lock bitcoin; bind it, in public, to a name; let the network itself guarantee both authenticity and weight; and allow the ordinary act of spending to wipe the slate clean. This is the entirety of the Orange Check protocol._
 
 ---
 
