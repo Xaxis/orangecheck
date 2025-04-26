@@ -37,7 +37,7 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
 
 ## 2. Protocol Overview
 
-The Orange Check protocol stands on a deceptively small foundation. An identity is nothing more than a single, unspent output on the Bitcoin blockchain—an amount of value that its owner has deliberately sequestered—and a brief, signed statement that publicly links that output to a chosen handle. Together, these two artefacts form a self-contained credential whose truth can be tested by anyone, anywhere, with one question to the ledger.
+The Orange Check protocol stands on a deceptively small foundation. An identity is nothing more than a single, unspent output on the Bitcoin blockchain—an amount of value that its owner has deliberately sequestered—and a brief, signed statement that publicly links that output to a chosen handle. Together, these two artifacts form a self-contained credential whose truth can be tested by anyone, anywhere, with one question to the ledger.
 
 Creation begins when a user generates a fresh Taproot address and funds it with as many satoshis as she is willing to place at risk. Because the address is new and never reused, its sole purpose is to embody the identity; it carries no prior history and betrays no other information. If she wishes to signal a longer-term commitment she may embed a simple Check-Lock-Time instruction, preventing the coins from moving until a future block height. Nothing exotic is required: every modern wallet can craft such a transaction today.
 
