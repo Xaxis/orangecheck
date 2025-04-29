@@ -27,8 +27,8 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
    + 4.8 [Reference REST Envelope (optional)](#48-reference-rest-envelope-optional)
    + 4.9 [Extensibility](#49-extensibility)
    + 4.10 [Test Vectors](#410-test-vectors)
-   + 4.11 [Linkability & Anti-Surveillance Best-Practices](#411-linkability-and-antisurveillance-bestpractices)
-   + 4.12 [Versioning and Change-Control](#412-versioning-and-changecontrol)
+   + 4.11 [Linkability & Anti-Surveillance Best-Practices](#411-linkability-and-antisurveillance-best-practices)
+   + 4.12 [Versioning and Change-Control](#412-versioning-and-change-control)
 
 ---
 
