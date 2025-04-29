@@ -1,0 +1,188 @@
+                         ORANGE CHECK PROTOCOL WHITE PAPER
+                     A Bitcoin-anchored identity primitive
+                                Draft 1.0 • April 2025
+
+              Copyright © 2025  Wil Neeley (@TheBTCViking).  
+              All rights reserved except as expressly granted below.
+
+================================================================================
+Creative Commons Attribution 4.0 International Public License
+================================================================================
+By exercising the Licensed Rights (defined below), You accept and agree
+to be bound by the terms and conditions of this Creative Commons
+Attribution 4.0 International Public License (“Public License”).  
+To the extent this Public License may be interpreted as a contract, You
+are granted the Licensed Rights in consideration of Your acceptance of
+these terms and conditions, and the Licensor grants You such rights in
+consideration of benefits the Licensor receives from making the
+Licensed Material available under these terms and conditions.
+
+--------------------------------------------------------------------
+SECTION 1 – DEFINITIONS.
+--------------------------------------------------------------------
+a. **Adapted Material** means material subject to Copyright and Similar
+   Rights that is derived from or based upon the Licensed Material and
+   in which the Licensed Material is translated, altered, arranged,
+   transformed, or otherwise modified in a manner requiring permission
+   under the Copyright and Similar Rights held by the Licensor.
+b. **Adapter’s License** means the license You apply to Your Copyright
+   and Similar Rights in Your contributions to Adapted Material in
+   accordance with the terms and conditions of this Public License.
+c. **BY 4.0 Compatible License** means a license listed at
+   https://creativecommons.org/share-your-work/licensing-considerations/compatible-licenses,
+   approved by Creative Commons as essentially the equivalent of this
+   Public License.
+d. **Copyright and Similar Rights** means copyright and/or similar
+   rights closely related to copyright including, without limitation,
+   performance, broadcast, sound recording, and Database Rights,
+   without regard to how the rights are labeled or categorized. For
+   purposes of this Public License, the rights specified in Section
+   2(b)(1)-(2) are not Copyright and Similar Rights.
+e. **Database** means a collection of material arranged in a systematic
+   or methodical way and individually accessible by electronic or other
+   means.
+f. **Database Rights** means rights other than copyright resulting from
+   Directive 96/9/EC of the European Parliament and of the Council of
+   11 March 1996 on the legal protection of databases, as amended and/or
+   succeeded, as well as other essentially equivalent rights anywhere
+   in the world.
+g. **Distribute** means to share Licensed Material by any means or
+   process that requires permission under the Licensed Rights, such as
+   reproduction, public display, public performance, distribution,
+   dissemination, communication, or importation, and to make material
+   available to the public including in ways that members of the public
+   may access the material from a place and at a time individually
+   chosen by them.
+h. **Licensed Material** means the literary and graphical works
+   composing the “Orange Check Protocol White Paper – Draft 1.0”, but
+   expressly **excluding** all trademarks, service marks, and logos of
+   Wil Neeley or the Orange Check project.
+i. **Licensed Rights** means the rights granted to You subject to the
+   terms and conditions of this Public License, which are limited to
+   all Copyright and Similar Rights that apply to Your use of the
+   Licensed Material and that the Licensor has authority to license.
+j. **Licensor** means Wil Neeley.
+k. **Share** means to provide material to the public by any means or
+   process that requires permission under the Licensed Rights.
+l. **Sui Generis Database Rights** means rights other than copyright
+   resulting from Directive 96/9/EC, as amended and/or succeeded, as
+   well as other essentially equivalent rights anywhere in the world.
+m. **You** means the individual or entity exercising the Licensed
+   Rights under this Public License.  
+   **Your** has a corresponding meaning.
+
+--------------------------------------------------------------------
+SECTION 2 – SCOPE.
+--------------------------------------------------------------------
+1. **License Grant.**
+   Subject to the terms and conditions of this Public License, the
+   Licensor hereby grants You a worldwide, royalty-free, non-sublicensable,
+   non-exclusive, irrevocable license to:
+   a. **Share** the Licensed Material, in whole or in part; and
+   b. **Adapt** the Licensed Material and create Adapted Material,
+      provided that You comply with the attribution requirements
+      in Section 3.
+2. **Exceptions and Limitations.**  
+   For the avoidance of doubt, where exceptions and limitations apply
+   to Your use, this Public License does not apply and You do not need
+   to comply with its terms and conditions.
+3. **Term.**  
+   The term of this Public License is specified in Section 6(a).
+4. **Media and Formats; Technical Modifications Allowed.**  
+   The Licensor authorizes You to make the Licensed Material available
+   in any medium or format.
+5. **Downstream Recipients.**  
+   Every recipient of the Licensed Material from You automatically
+   receives an offer from the Licensor to exercise the Licensed Rights
+   under the terms and conditions of this Public License.
+6. **No Endorsement.**  
+   Nothing in this Public License constitutes or may be construed as
+   permission to assert or imply that You are, or that Your use of the
+   Licensed Material is, connected with, or sponsored, endorsed, or
+   granted official status by, the Licensor.
+
+--------------------------------------------------------------------
+SECTION 3 – LICENSE CONDITIONS.
+--------------------------------------------------------------------
+Your exercise of the Licensed Rights is expressly made subject to the
+following conditions:
+**Attribution.** If You Share the Licensed Material (including
+in modified form), You must:
+a. retain the following if supplied by the Licensor within the Licensed
+   Material:
+   i. identification of the creator(s) of the Licensed Material and any
+      others designated to receive attribution, including by pseudonym;
+   ii. a copyright notice;
+   iii. a notice that refers to this Public License;
+   iv. a notice that refers to the disclaimer of warranties;
+   v. a URI or hyperlink to the Licensed Material to the extent
+      reasonably practicable;
+b. indicate if You modified the Licensed Material and retain an
+   indication of any previous modifications; and
+c. indicate the Licensed Material is licensed under this Public
+   License, and include the text or the URI/Hyperlink to this Public
+   License.
+
+You may satisfy the conditions in any reasonable manner based on the
+medium, means, and context in which You Share the Licensed Material.
+
+--------------------------------------------------------------------
+SECTION 4 – DISCLAIMER OF WARRANTIES AND LIMITATION OF LIABILITY.
+--------------------------------------------------------------------
+a. **Unless otherwise separately undertaken by the Licensor, to the
+   extent possible, the Licensor offers the Licensed Material “AS-IS”
+   and “AS-AVAILABLE,” and makes no representations or warranties of
+   any kind concerning the Licensed Material, whether express, implied,
+   statutory, or other.** This includes, without limitation, warranties
+   of title, merchantability, fitness for a particular purpose,
+   non-infringement, absence of latent or other defects, accuracy, or
+   the presence or absence of errors.  
+b. **To the greatest extent permissible, in no event will the Licensor
+   be liable to You on any legal theory (including, without limitation,
+   negligence) or otherwise for any direct, special, indirect,
+   incidental, consequential, punitive, exemplary, or other losses,
+   costs, expenses, or damages** arising out of this Public License or
+   use of the Licensed Material, even if the Licensor has been advised
+   of the possibility of such losses, costs, expenses, or damages.
+
+--------------------------------------------------------------------
+SECTION 5 – TERMINATION.
+--------------------------------------------------------------------
+a. This Public License automatically terminates if You fail to comply
+   with its terms.  
+b. Your rights under this Public License will terminate automatically
+   if You institute (or join) a legal claim against the Licensor
+   relating to the Licensed Material.
+
+--------------------------------------------------------------------
+SECTION 6 – OTHER TERMS AND CONDITIONS.
+--------------------------------------------------------------------
+a. The Licensor shall not be bound by any additional or different terms
+   or conditions communicated by You.  
+b. Creative Commons may publish new versions of this Public License from
+   time to time. Your continued use of the Licensed Material under the
+   new version is at Your option.
+
+--------------------------------------------------------------------
+END OF LICENSE
+--------------------------------------------------------------------
+
+===============================================================================
+TRADEMARK AND BRANDING NOTICE
+===============================================================================
+“Orange Check,” the circular check-mark logo, and the handle
+“@TheBTCViking” are unregistered trademarks of Wil Neeley.  
+This License does **NOT** grant permission to use those marks in any
+manner that might cause confusion as to source, sponsorship, or
+endorsement.
+
+===============================================================================
+NO WARRANTY
+===============================================================================
+The Licensed Material is provided **“AS IS”** without warranty of any
+kind, express or implied, including but not limited to the warranties
+of merchantability, fitness for a particular purpose, and non-infringement.
+In no event shall the authors or copyright holders be liable for any
+claim, damages, or other liability, whether in an action of contract,
+tort, or otherwise, arising from, out of, or in connection with the
+Licensed Material or the use or other dealings in the Licensed Material.
