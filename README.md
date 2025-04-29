@@ -9,29 +9,30 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
 
 1. [Abstract](#1-abstract)
 2. [Protocol Overview](#2-protocol-overview)
-3. [Economic and Philosophical Rationale](#3-economic-and-philosophical-rationale)
-4. [Security and Threat Model](#4-security-and-threat-model)
-5. [Adoption Pathways and Illustrative Policies](#5-adoption-pathways-and-illustrative-policies)
-6. [Formal Specification](#6-formal-specification)
-   + 6.1 [Notation and Pre-requisites](#61-notation-and-pre-requisites)
-   + 6.2 [Stake-Output Construction](#62-stake-output-construction)
-     + 6.2.1 [Key-path Only](#621-key-path-only)
-     + 6.2.2 [Key-path + CLTV Script-path](#622-key-path--cltv-script-path)
-   + 6.3 [Canonical Claim](#63-canonical-claim)
-   + 6.4 [Signature Procedure](#64-signature-procedure)
-   + 6.5 [Deterministic Verification Algorithm](#65-deterministic-verification-algorithm)
-   + 6.6 [Weight Semantics (non-normative)](#66-weight-semantics-non-normative)
-   + 6.7 [Revocation Semantics](#67-revocation-semantics)
-   + 6.8 [Reference REST Envelope (optional)](#68-reference-rest-envelope-optional)
-   + 6.9 [Extensibility](#69-extensibility)
-   + 6.10 [Test Vectors](#610-test-vectors)
+   + 2.1 [Comparative Landscape](#21-comparative-landscape)
+   + 2.2 [Economic and Philosophical Rationale](#22-economic-and-philosophical-rationale)
+   + 2.3 [Security and Threat Model](#23-security-and-threat-model)
+3. [Adoption Pathways and Illustrative Policies](#3-adoption-pathways-and-illustrative-policies)
+4. [Formal Specification](#4-formal-specification)
+   + 4.1 [Notation and Pre-requisites](#41-notation-and-pre-requisites)
+   + 4.2 [Stake-Output Construction](#42-stake-output-construction)
+     + 4.2.1 [Key-path Only](#421-key-path-only)
+     + 4.2.2 [Key-path + CLTV Script-path](#422-key-path--cltv-script-path)
+   + 4.3 [Canonical Claim](#43-canonical-claim)
+   + 4.4 [Signature Procedure](#44-signature-procedure)
+   + 4.5 [Deterministic Verification Algorithm](#45-deterministic-verification-algorithm)
+   + 4.6 [Weight Semantics (non-normative)](#46-weight-semantics-non-normative)
+   + 4.7 [Revocation Semantics](#47-revocation-semantics)
+   + 4.8 [Reference REST Envelope (optional)](#48-reference-rest-envelope-optional)
+   + 4.9 [Extensibility](#49-extensibility)
+   + 4.10 [Test Vectors](#410-test-vectors)
 
 ---
 
 ## 1. Abstract
 
 > The Internet is awash in identities that cost nothing to mint, nothing to burn, and therefore nothing to trust. Platforms respond by selling proprietary check-marks or by harvesting passports, turning spam into rent and privacy into collateral.
-> Orange Check offers a simpler bargain: publish a name only if you are willing to lock a measure of Bitcoin behind it, and let the chain itself attest—without intermediaries, tokens, or personal documents—that the lock still holds. The mechanism is disarmingly small. One Taproot output, funded and left unspent, becomes the whole credential; a single BIP-322 signature binds that output to a chosen handle; and a lone `gettxout` query is enough for any service to decide, in real time, whether the bond endures. Should the coins move, the badge dissolves everywhere at once; should a community demand greater assurance, it need only raise the satoshi or timelock threshold it is willing to respect. Every facet of reputation—creation, weighting, and revocation—emerges from the ordinary physics of Bitcoin itself, not from a registrar or a smart-contract VM. By pricing identity in provable energy while leaving its interpretation to the edge, Orange Check restores economic gravity to online speech without exacting a toll of data or dependence. It is a protocol in the strict sense of the word: an invariant kernel small enough to fit on a postcard, open enough to be owned by no one, and sturdy enough to let truthful voices stand out against a background of cost-free noise.
+> Orange Check offers a simpler bargain: publish a name only if you are willing to lock a measure of Bitcoin behind it, and let the chain itself attest—without intermediaries, tokens, or personal documents—that the lock still holds. The mechanism is disarmingly small. One Taproot output, funded and left unspent, becomes the whole credential; a single BIP-322 signature binds that output to a chosen handle; and a lone `gettxout` query is enough for any service to decide, in real time, whether the bond endures. Should the coins move, the badge dissolves everywhere at once; should a community demand greater assurance, it need only raise the satoshi or timelock threshold it is willing to respect. Every facet of reputation—creation, weighting, and revocation—emerges from the ordinary physics of Bitcoin itself, not from a registrar or a smart-contract VM or separate utility token. By pricing identity in provable energy while leaving its interpretation to the edge, Orange Check restores economic gravity to online speech without exacting a toll of data or dependence. It is a protocol in the strict sense of the word: an invariant kernel small enough to fit on a postcard, open enough to be owned by no one, and sturdy enough to let truthful voices stand out against a background of cost-free noise.
 
 ---
 
@@ -49,9 +50,23 @@ Revocation is automatic and irrevocable. The moment the owner spends the coins, 
 
 _In four sentences: lock bitcoin; bind it, in public, to a name; let the network itself guarantee both authenticity and weight; and allow the ordinary act of spending to wipe the slate clean. This is the entirety of the Orange Check protocol._
 
+### 2.1 Comparative Landscape
+
+| Property | **Orange Check<br>(Bitcoin)** | ENS / Polygon | W3C DID + WebAuthn | PoS “ID tokens” | Worldcoin / Biometrics |
+|----------|------------------------------|---------------|-------------------|-----------------|------------------------|
+| **Anchor** | UTXO + PoW (irreversible) | ERC-721 (upgradable) | Vendor-hosted JSON & PKI | Validator quorum | Central iris DB |
+| **Sybil cost** | Linear in sats locked; energy-priced | ≈ $0 (gas) | ≈ $0 | Buy stake token once | Free after KYC |
+| **Revocation** | Spend coin → badge dies everywhere | `nameWrapper` only | Rotate endpoint keys | Cartel vote | Operator decree |
+| **Custodian risk** | None (user key) | ENS DAO & L2 bridges | Hosting provider | Token issuer & stakers | Foundation custody |
+| **Political neutrality** | Global bearer asset | Subject to USDC/USDT rails | Local regulation | Governance politics | Sanction lists |
+| **Dependency stack** | Bitcoin Core only | Ethereum L1+L2 | Web PKI + browser CAs | Custom chain | Proprietary HW |
+
+> **Take-away :** Every alternative re-introduces either a change-controlled contract, a rent-seeking token, or a political chokepoint. Orange Check’s sole dependency is the most censorship-resistant ledger on Earth.
+
+
 ---
 
-## 3. Economic and Philosophical Rationale
+### 2.2 Economic and Philosophical Rationale
 
 The modern Internet was built on the assumption that identity should be frictionless. E-mail addresses and social-media handles spring into existence at effectively zero cost, and—because they can be discarded just as cheaply—nothing that is said or promised through them needs to be taken seriously. We have tried to patch this vacuum with two very different tools. At one extreme lie bureaucratic credentials: government photo IDs, selfies holding passports, scans of utility bills. These create a strong mapping from a digital handle to a flesh-and-blood citizen, yet the mapping is neither portable nor private. Each platform becomes a honeypot of sensitive information, and the citizen is forced to reveal more than the conversation actually demands. At the other extreme lie proprietary badges such as the blue check-mark, a brand rented from a private gatekeeper for a monthly fee. The badge signals something, but what it signals is mostly that the user is willing to pay—or to keep paying—a toll to speak. It is a marker of rent, not of commitment or authenticity.
 
@@ -69,7 +84,7 @@ In short, Orange Check’s economic foundation is both ancient and modern. It re
 
 ---
 
-## 4. Security and Threat Model
+### 2.3 Security and Threat Model
 
 Any protocol that pretends to defend authenticity must be willing to stare its own adversaries in the eye. Orange Check’s simplicity is not an accident of omission but a deliberate attempt to reduce the surface upon which attackers can press. Yet certain categories of threat remain, and they deserve sober treatment rather than marketing gloss.
 
@@ -89,7 +104,7 @@ Taken together, these threats describe a protocol whose worst-case failure modes
 
 ---
 
-## 5. Adoption Pathways and Illustrative Policies
+## 3. Adoption Pathways and Illustrative Policies
 
 A protocol, however elegant, is sterile until breathed into by real users and the institutions that serve them. To make the discussion concrete, imagine three actors: a global social network we will call Agora, a themed discussion forum named Stacktown, and a decentralised treasury DAO referred to as Common-Pool. Each faces a swarm of low-cost identities and must decide how Orange Check can temper the noise without freezing out genuine voices.
 
@@ -109,11 +124,11 @@ In this sense Orange Check completes a circuit begun when Bitcoin first priced t
 
 ---
 
-## 6. Formal Specification
+## 4. Formal Specification
 
 > This section freezes the invariant core of the protocol. Everything beyond these rules—gateways, weighting curves, user-interface conventions—is non-normative and may evolve without revision to the specification.
 
-### 6.1  Notation and Pre-requisites
+### 4.1  Notation and Pre-requisites
 
 * **BTC** denotes the Bitcoin blockchain mainnet, consensus rules as of Taproot activation (BIP-341/342).
 * **UTXO** = unspent transaction output.
@@ -127,11 +142,11 @@ The verifier is assumed to possess:
 1. A fully-validating Bitcoin node or trusted proxy that exposes the RPC method `gettxout(txid string, n int, include_mempool bool) -> json`.
 2. A BIP-322 signature engine for both ECDSA (legacy) and Schnorr (preferred).
 
-### 6.2  Stake Output Construction
+### 4.2  Stake Output Construction
 
 The credential’s anchor is a Taproot key-path spend, optionally augmented by a CLTV script path to add a time cost.
 
-#### 6.2.1  Key-path only (minimal form)
+#### 4.2.1  Key-path only (minimal form)
 
 ```text
 scriptPubKey = OP_1 <32-byte-X-only-pubkey>
@@ -142,7 +157,7 @@ value        ≥  dust_limit + relay_fee
 - `relay_fee` is the node’s minimum feerate (e.g., 1 sat/vB).
 - There is no `OP_CHECKLOCKTIMEVERIFY` branch; spendability is instant.
 
-#### 6.2.2 Key-path + CLTV script-path (timelocked form)
+#### 4.2.2 Key-path + CLTV script-path (timelocked form)
 
 The Taproot Merkle tree commits to one additional leaf:
 
@@ -159,7 +174,7 @@ The TapTweak is computed per BIP-341; the key-path public key remains the same 3
 
 Wallets MAY also set a transaction-level `nLockTime`; verifiers MUST ignore it when computing liveness or weight, because it ceases to matter once the funding transaction is mined.
 
-### 6.3  Canonical Claim
+### 4.3  Canonical Claim
 
 A claim is a UTF-8 JSON document without extra whitespace; keys are sorted lexicographically. Version 1 has four keys:
 
@@ -190,7 +205,7 @@ C = utf8_bytes(concat(
 
 Notice the key order `h,t,u,v`. Version numbers other than `1` MUST cause the verifier to reject.
 
-### 6.4 Signature Procedure (BIP-322)
+### 4.4 Signature Procedure (BIP-322)
 
 Let **pk** be the X-only key that controls the _key-path_ of the stake output. The signature domain is:
 
@@ -203,7 +218,7 @@ The resulting `sig` is 64 bytes for Schnorr or 71-73 bytes DER for ECDSA.
 
 Publish **(C, sig)** together. For human-readable media (Twitter, Nostr) the signature should be base64url-encoded.
 
-### 6.5 Deterministic Verification Algorithm
+### 4.5 Deterministic Verification Algorithm
 
 The following pseudocode is normative.
 
@@ -242,7 +257,7 @@ def verify_orange(handle, claim_json, sig, threshold_sat, height_now):
 
 A verifier MUST treat any failure case as invalid except `utxo is None`, which is **revoked**.
 
-### 6.6  Weight Semantics (Non-normative)
+### 4.6  Weight Semantics (Non-normative)
 
 The protocol guarantees only the numeric value of the stake in satoshis. A relying service MAY map that to influence by:
 
@@ -253,13 +268,13 @@ The protocol guarantees only the numeric value of the stake in satoshis. A relyi
 
 Such transforms occur entirely off-chain; they do not affect interop.
 
-### 6.7  Revocation Semantics
+### 4.7  Revocation Semantics
 
 - Spending the output in any transaction—key path or script path—causes `gettxout` to return null.
 - Re-orgs that drop the funding transaction result in immediate revocation until the transaction is re-mined.
 - There is no grace period; credential liveness equals UTXO existence.
 
-### 6.8 Reference REST Envelope (optional)
+### 4.8 Reference REST Envelope (optional)
 
 Gateways MAY expose a convenience API. The following schema is RECOMMENDED but not required for interoperability.
 
@@ -281,13 +296,13 @@ GET /oc/verify/@alice
 
 No authentication is mandated. Gateways SHOULD rate-limit by IP and cache positive lookups for ≤ 10 seconds.
 
-### 6.9  Extensibility 
+### 4.9  Extensibility 
 
 - Unknown top-level keys in the JSON claim MUST cause a verifier to reject. Future versions increase `"v"` and document new keys.
 - A `meta` field MAY be introduced in a later version to carry a SHA-256 of auxiliary data (avatar, credentials). Verifiers that do not understand it ignore that data while still validating stake.
 - Post-quantum migration will follow whatever curve Bitcoin selects; the stake output then uses the new key type without altering higher layers.
 
-### 6.10 Test Vectors
+### 4.10 Test Vectors
 
 | Case        | txid : vout                                   | Value (sat) | CLTV height | Handle  | Canonical Hash (SHA-256, hex) | Signature (base64url, truncated) |
 |-------------|-----------------------------------------------|----------|------------|---------|------------------------------|----------------------------------|
