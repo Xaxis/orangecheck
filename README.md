@@ -26,6 +26,7 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
    + 4.8 [Reference REST Envelope (optional)](#48-reference-rest-envelope-optional)
    + 4.9 [Extensibility](#49-extensibility)
    + 4.10 [Test Vectors](#410-test-vectors)
+   + 4.11 [Linkability & Anti-Surveillance Best-Practices](#411-linkability-antisurveillance-bestpractices)
 
 ---
 
@@ -81,6 +82,13 @@ Energy pricing is also apolitical. A citizen in Lagos or São Paulo can post the
 Finally, the protocol refrains from dictating how the stake must be interpreted. A small hobby forum may decide that 0.00001 BTC suffices, a global finance platform may require 0.05 BTC and a six-month timelock, and a DAO may square-root all weights to dampen plutocracy. Each of these policies is coherent, and each can evolve without a change to the underlying rules, because the protocol exposes only incontestable facts: coin, height, and lock. Interpretation belongs to the edge, where human communities can imbue those facts with the norms that suit them.
 
 In short, Orange Check’s economic foundation is both ancient and modern. It revives the centuries-old idea of earnest money—a pledge visible to one’s peers—and weds it to the thermodynamic finality of proof-of-work. The result is a signal that cannot be counterfeited for less than it costs to create and that survives the collapse of every registry or corporation that might try to mediate it. It is a protocol of skin-in-the-game, expressed in the most neutral unit of skin we have.
+
+> #### Regulatory Posture  
+> *Orange Check is a signatures-only primitive; it takes no custody, transmits no customer funds, and stores no personal data.*  
+> • **Not money transmission:** users lock coins in their own UTXO; verifiers only read public chain state.  
+> • **Not an investment contract:** the stake yields no profit, dividend, or governance right.  
+> • **No KYC obligation:** the protocol is value-agnostic; any PII exchange is a platform-layer choice.  
+> • **GDPR / CCPA minimal:** deleting an identity = spending the UTXO—no data-erasure request required.
 
 ---
 
@@ -311,6 +319,16 @@ No authentication is mandated. Gateways SHOULD rate-limit by IP and cache positi
 | Bad-sig     | *same outpoint as “Minimal”*                  | 100000   | —          | `@fake` | `7c94e1…b02a`                | — (invalid)                      |
 
 A reference verifier in Rust and Python with the above vectors will be published in the `oc` repository. The test vectors are not normative but are provided to illustrate the protocol’s behaviour.
+
+### 4.11 Linkability & Anti-Surveillance Best-Practices
+
+1. **CoinJoin / PayJoin funding** – create the stake from mixed coins so the UTXO cannot be trivially traced backwards.  
+2. **LN → on-chain submarine swap** – fund the Taproot output without revealing your source node.  
+3. **One-time handles** – use separate stakes for unrelated personas (e.g., whistle-blowing vs. social).  
+4. **MuSig2 / FROST multisig** – hide the signer set; chain observers see only one X-only key.  
+5. **Avoid address reuse** – never post the same Taproot public key in other contexts.
+
+Following these practices keeps Orange Check a *proof-of-cost* signal rather than a surveillance beacon.
 
 ---
 
