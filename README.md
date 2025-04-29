@@ -12,7 +12,7 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
    + 2.1 [Comparative Landscape](#21-comparative-landscape)
    + 2.2 [Economic and Philosophical Rationale](#22-economic-and-philosophical-rationale)
    + 2.3 [Security and Threat Model](#23-security-and-threat-model)
-   + 2.4 [Sovereign and Critical-Infrastructure Applications](24-sovereign-and-critical-infrastructure-applications)
+   + 2.4 [Sovereign and Critical-Infrastructure Applications](#24-sovereign-and-critical-infrastructure-applications)
 3. [Adoption Pathways and Illustrative Policies](#3-adoption-pathways-and-illustrative-policies)
 4. [Formal Specification](#4-formal-specification)
    + 4.1 [Notation and Pre-requisites](#41-notation-and-pre-requisites)
@@ -147,7 +147,7 @@ In this sense Orange Check completes a circuit begun when Bitcoin first priced t
 
 > This section freezes the invariant core of the protocol. Everything beyond these rules—gateways, weighting curves, user-interface conventions—is non-normative and may evolve without revision to the specification.
 
-### 4.1  Notation and Pre-requisites
+### 4.1 Notation and Pre-requisites
 
 * **BTC** denotes the Bitcoin blockchain mainnet, consensus rules as of Taproot activation (BIP-341/342).
 * **UTXO** = unspent transaction output.
@@ -161,11 +161,11 @@ The verifier is assumed to possess:
 1. A fully-validating Bitcoin node or trusted proxy that exposes the RPC method `gettxout(txid string, n int, include_mempool bool) -> json`.
 2. A BIP-322 signature engine for both ECDSA (legacy) and Schnorr (preferred).
 
-### 4.2  Stake Output Construction
+### 4.2 Stake Output Construction
 
 The credential’s anchor is a Taproot key-path spend, optionally augmented by a CLTV script path to add a time cost.
 
-#### 4.2.1  Key-path only (minimal form)
+#### 4.2.1 Key-path only (minimal form)
 
 ```text
 scriptPubKey = OP_1 <32-byte-X-only-pubkey>
@@ -193,7 +193,7 @@ The TapTweak is computed per BIP-341; the key-path public key remains the same 3
 
 Wallets MAY also set a transaction-level `nLockTime`; verifiers MUST ignore it when computing liveness or weight, because it ceases to matter once the funding transaction is mined.
 
-### 4.3  Canonical Claim
+### 4.3 Canonical Claim
 
 A claim is a UTF-8 JSON document without extra whitespace; keys are sorted lexicographically. Version 1 has four keys:
 
@@ -276,7 +276,7 @@ def verify_orange(handle, claim_json, sig, threshold_sat, height_now):
 
 A verifier MUST treat any failure case as invalid except `utxo is None`, which is **revoked**.
 
-### 4.6  Weight Semantics (Non-normative)
+### 4.6 Weight Semantics (Non-normative)
 
 The protocol guarantees only the numeric value of the stake in satoshis. A relying service MAY map that to influence by:
 
@@ -287,7 +287,7 @@ The protocol guarantees only the numeric value of the stake in satoshis. A relyi
 
 Such transforms occur entirely off-chain; they do not affect interop.
 
-### 4.7  Revocation Semantics
+### 4.7 Revocation Semantics
 
 - Spending the output in any transaction—key path or script path—causes `gettxout` to return null.
 - Re-orgs that drop the funding transaction result in immediate revocation until the transaction is re-mined.
@@ -315,7 +315,7 @@ GET /oc/verify/@alice
 
 No authentication is mandated. Gateways SHOULD rate-limit by IP and cache positive lookups for ≤ 10 seconds.
 
-### 4.9  Extensibility 
+### 4.9 Extensibility 
 
 - Unknown top-level keys in the JSON claim MUST cause a verifier to reject. Future versions increase `"v"` and document new keys.
 - A `meta` field MAY be introduced in a later version to carry a SHA-256 of auxiliary data (avatar, credentials). Verifiers that do not understand it ignore that data while still validating stake.
