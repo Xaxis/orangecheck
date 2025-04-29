@@ -83,7 +83,6 @@ Finally, the protocol refrains from dictating how the stake must be interpreted.
 
 In short, Orange Check’s economic foundation is both ancient and modern. It revives the centuries-old idea of earnest money—a pledge visible to one’s peers—and weds it to the thermodynamic finality of proof-of-work. The result is a signal that cannot be counterfeited for less than it costs to create and that survives the collapse of every registry or corporation that might try to mediate it. It is a protocol of skin-in-the-game, expressed in the most neutral unit of skin we have.
 
-> #### Regulatory Posture  
 > *Orange Check is a signatures-only primitive; it takes no custody, transmits no customer funds, and stores no personal data.*  
 > • **Not money transmission:** users lock coins in their own UTXO; verifiers only read public chain state.  
 > • **Not an investment contract:** the stake yields no profit, dividend, or governance right.  
