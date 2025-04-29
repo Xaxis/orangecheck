@@ -12,6 +12,7 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
    + 2.1 [Comparative Landscape](#21-comparative-landscape)
    + 2.2 [Economic and Philosophical Rationale](#22-economic-and-philosophical-rationale)
    + 2.3 [Security and Threat Model](#23-security-and-threat-model)
+   + 2.4 [Sovereign & Critical-Infrastructure Applications](24-sovereign-critical-infrastructure-applications)
 3. [Adoption Pathways and Illustrative Policies](#3-adoption-pathways-and-illustrative-policies)
 4. [Formal Specification](#4-formal-specification)
    + 4.1 [Notation and Pre-requisites](#41-notation-and-pre-requisites)
@@ -64,7 +65,6 @@ _In four sentences: lock bitcoin; bind it, in public, to a name; let the network
 
 > **Take-away :** Every alternative re-introduces either a change-controlled contract, a rent-seeking token, or a political chokepoint. Orange Check’s sole dependency is the most censorship-resistant ledger on Earth.
 
-
 ---
 
 ### 2.2 Economic and Philosophical Rationale
@@ -108,6 +108,17 @@ Denial-of-service risks must also be considered. Could a hostile network blanket
 Finally, quantum adversaries occasionally rear their speculative heads. The day a practical quantum computer can break secp256k1 is the day Bitcoin itself must roll to a post-quantum signature scheme. Because Orange Check relies on exactly the same key material, it will migrate in lock-step with the base protocol. No separate upgrade path is required.
 
 Taken together, these threats describe a protocol whose worst-case failure modes revert neatly to first principles. If the stake vanishes, the badge dies with mathematical certainty; if a key is stolen, economic pain follows the victim until the chain records the spend; if a whale attempts capture, policy can neuter her advantage without a line of change to the specification. Orange Check’s security is as strong—and no stronger—than Bitcoin’s UTXO model and the community’s willingness to interpret that model sensibly. That is a virtue, not a limit.
+
+---
+
+### 2.4 Sovereign & Critical-Infrastructure Applications
+
+| Domain | OC Integration | Attack Prevented |
+|--------|----------------|------------------|
+| **Software-update signing** | Defence ministries anchor firmware manifests to a 0.5 BTC multisig stake. Field units verify OC before flashing. | Supply-chain hijack / fake binary |
+| **Emergency broadcast** | Civil-defence agency stakes 0.5 BTC; cell & TV networks relay alerts only if OC live. | Spoofed evacuation orders |
+| **Diplomatic cables** | Embassies accept messages signed by ≥ 5-of-7 keys whose Merkle root matches the on-chain stake. | Impersonation of foreign-service officials |
+| **LEO satellite commands** | Ground packets must carry an OC proof bound to the satellite-owner stake. | Hostile take-over of space assets |
 
 ---
 
