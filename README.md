@@ -12,7 +12,7 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
    + 2.1 [Comparative Landscape](#21-comparative-landscape)
    + 2.2 [Economic and Philosophical Rationale](#22-economic-and-philosophical-rationale)
    + 2.3 [Security and Threat Model](#23-security-and-threat-model)
-   + 2.4 [Sovereign & Critical-Infrastructure Applications](24-sovereign-critical-infrastructure-applications)
+   + 2.4 [Sovereign and Critical-Infrastructure Applications](24-sovereign-and-critical-infrastructure-applications)
 3. [Adoption Pathways and Illustrative Policies](#3-adoption-pathways-and-illustrative-policies)
 4. [Formal Specification](#4-formal-specification)
    + 4.1 [Notation and Pre-requisites](#41-notation-and-pre-requisites)
@@ -27,7 +27,8 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
    + 4.8 [Reference REST Envelope (optional)](#48-reference-rest-envelope-optional)
    + 4.9 [Extensibility](#49-extensibility)
    + 4.10 [Test Vectors](#410-test-vectors)
-   + 4.11 [Linkability & Anti-Surveillance Best-Practices](#411-linkability-antisurveillance-bestpractices)
+   + 4.11 [Linkability & Anti-Surveillance Best-Practices](#411-linkability-and-antisurveillance-bestpractices)
+   + 4.12 [Versioning and Change-Control](#412-versioning-and-changecontrol)
 
 ---
 
@@ -111,7 +112,7 @@ Taken together, these threats describe a protocol whose worst-case failure modes
 
 ---
 
-### 2.4 Sovereign & Critical-Infrastructure Applications
+### 2.4 Sovereign and Critical-Infrastructure Applications
 
 | Domain | OC Integration | Attack Prevented |
 |--------|----------------|------------------|
@@ -330,7 +331,7 @@ No authentication is mandated. Gateways SHOULD rate-limit by IP and cache positi
 
 A reference verifier in Rust and Python with the above vectors will be published in the `oc` repository. The test vectors are not normative but are provided to illustrate the protocol’s behaviour.
 
-### 4.11 Linkability & Anti-Surveillance Best-Practices
+### 4.11 Linkability and Anti-Surveillance Best-Practices
 
 1. **CoinJoin / PayJoin funding** – create the stake from mixed coins so the UTXO cannot be trivially traced backwards.  
 2. **LN → on-chain submarine swap** – fund the Taproot output without revealing your source node.  
@@ -339,6 +340,13 @@ A reference verifier in Rust and Python with the above vectors will be published
 5. **Avoid address reuse** – never post the same Taproot public key in other contexts.
 
 Following these practices keeps Orange Check a *proof-of-cost* signal rather than a surveillance beacon.
+
+### 4.12 Versioning and Change-Control
+
+* **Semantic flag** – Every claim includes `"v": n`; verifiers **MUST** reject unknown majors.  
+* **OCP process** – Changes are proposed as **Orange Check Proposals** (markdown + reference code) in the public repo. Three independent impl-reports required.  
+* **Activation rule** – A new major version activates when ≥ 90 % of *weighted* live stakes have re-signed over 12 months. No committee can override; the community signals by moving its own coins.  
+* **Narrow-waist mandate** – The core will *not* add global registries, alt-chains, or rent tokens. Such ideas fork into a brand-new major version.
 
 ---
 
