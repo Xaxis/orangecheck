@@ -62,7 +62,7 @@ Because cost rises linearly with sats locked, the economic price of Sybil attack
 
 ---
 
-## 3. Economic & Philosophical Rationale  
+## 3. Economic and Philosophical Rationale  
 
 Digital identity is usually weightless: an e-mail or username can be conjured, abandoned, or multiplied at near-zero cost, so its claims are equally disposable. OrangeCheck restores **ontological heft** by tying a handle to something that cannot be faked more cheaply than it is created—Bitcoin’s proof-of-work.  
 
