@@ -11,132 +11,139 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
 2. [Protocol Overview](#2-protocol-overview)
 3. [Economic & Philosophical Rationale](#3-economic--philosophical-rationale)
 4. [Adoption Pathways & Policies](#4-adoption-pathways--policies)
-5. [Security & Threat Model](#5-security--threat-model)
-6. [Formal Specification](#6-formal-specification)
-   + 6.1 [Notation and Pre-requisites](#61-notation-and-pre-requisites)
-   + 6.2 [Stake-Output Construction](#62-stake-output-construction)
-     + 6.2.1 [Key-path Only](#621-key-path-only-minimal-form)
-     + 6.2.2 [Key-path + CLTV Script-path](#622-key-path--cltv-script-path-timelocked-form)
-   + 6.3 [Canonical Claim](#63-canonical-claim)
-   + 6.4 [Signature Procedure](#64-signature-procedure)
-   + 6.5 [Deterministic Verification Algorithm](#65-deterministic-verification-algorithm)
-   + 6.6 [Weight Semantics (non-normative)](#66-weight-semantics-non-normative)
-   + 6.7 [Revocation Semantics](#67-revocation-semantics)
-   + 6.8 [Reference REST Envelope (optional)](#68-reference-rest-envelope-optional)
-   + 6.9 [Extensibility](#69-extensibility)
-   + 6.10 [Test Vectors](#610-test-vectors)
-   + 6.11 [Linkability & Anti-Surveillance Best-Practices](#611-linkability-and-antisurveillance-best-practices)
-   + 6.12 [Versioning and Change-Control](#612-versioning-and-change-control)
+5. [Formal Specification](#5-formal-specification)
+   + 5.1 [Notation and Pre-requisites](#51-notation-and-pre-requisites)
+   + 5.2 [Stake-Output Construction](#52-stake-output-construction)
+     + 5.2.1 [Key-path Only](#521-key-path-only-minimal-form)
+     + 5.2.2 [Key-path + CLTV Script-path](#522-key-path--cltv-script-path-timelocked-form)
+   + 5.3 [Canonical Claim](#53-canonical-claim)
+   + 5.4 [Signature Procedure](#54-signature-procedure)
+   + 5.5 [Deterministic Verification Algorithm](#55-deterministic-verification-algorithm)
+   + 5.6 [Weight Semantics (non-normative)](#56-weight-semantics-non-normative)
+   + 5.7 [Revocation Semantics](#57-revocation-semantics)
+   + 5.8 [Reference REST Envelope (optional)](#58-reference-rest-envelope-optional)
+   + 5.9 [Extensibility](#59-extensibility)
+   + 5.10 [Test Vectors](#510-test-vectors)
+   + 5.11 [Linkability & Anti-Surveillance Best-Practices](#511-linkability-and-antisurveillance-best-practices)
+   + 5.12 [Versioning and Change-Control](#512-versioning-and-change-control)
 
 ---
 
 ## 1. Abstract
 
-> The web is flooded with cost-free identities, so their promises are priced at zero. **OrangeCheck** restores economic gravity and welds identity to live authentication by requiring every handle to be signed—and continuously controlled—by the key that locks a fresh 34-byte Taproot output, a standard P2TR UTXO that adds no witness overhead or `OP_RETURN` baggage, unlike Ordinal inscriptions whose multi-megabyte witness payloads swell block sizes toward the 4 MB ceiling and distract Bitcoin from its lean monetary purpose. A verifier needs only a BIP-322 challenge and a single `gettxout`: a valid signature plus an unspent coin proves presence and stake, while spending the coin dissolves this "badge" everywhere at once. Built solely from native Bitcoin primitives, OrangeCheck moves intact identities across sites, apps, and protocols without registrars, side-tokens, or personal data, inheriting proof-of-work finality and letting each community map stake to bond, weight, or quorum. It thus transforms portable, cross-platform identity into a first-class function of the world’s most secure ledger, forcing the economic cost of Sybil attacks to scale linearly with sats at risk, allowing committed voices to stand out against cost-free noise.
+> OrangeCheck converts any username into a live, slash-able security deposit anchored by native Bitcoin primitives—either a 34-byte Taproot UTXO _or_ a Lightning HOLD invoice—so every handle carries thermodynamic weight instead of free-to-forge fluff without polluting block space. The on-chain variant is no more than a dust-threshold output that adds zero witness overhead and can be batch-revoked with any spend, while the Lightning path keeps even that footprint off-chain; thus millions of identities translate to only a few virtual bytes each. One BIP-322 signature plus a single `gettxout` (or an HTLC probe) proves both authorship and ongoing custody; spending the coin or settling the invoice dissolves the badge everywhere at once, with no registrars, side-tokens, or personal data. Stake value and uninterrupted tenure form a portable risk signal that forums can treat as an anti-spam badge, DAOs as quadratic voting weight, and marketplaces as on-the-spot credit—yet the core always stays “one bond, one sig,” leaving reputation math and slash policies to the edge. By forcing every Sybil to lock sats linearly with the noise they create while capping chain load at a few vbytes per identity, OrangeCheck restores economic gravity to digital identity without fueling block-bloat fears.
 
 ---
 
 ## 2. Protocol Overview
 
-OrangeCheck reduces digital identity to two native Bitcoin facts: **(1)** a fresh pay-to-Taproot output that locks a deliberate sum of sats, and **(2)** a BIP-322 signature that binds that outpoint to a chosen handle. Because the *same* key that guards the stake can answer any BIP-322 challenge, the credential doubles as a reusable login token—identity **and** authentication in one primitive. These two artifacts—no more than a 34-byte `scriptPubKey` on-chain and a tweet-sized JSON blob off-chain—can be verified by any service with a single `gettxout`. The stake is ordinary, witness-free block weight; the claim travels wherever text can travel, so identity rides across websites, apps, and protocols without registrars, side-tokens, or personal data.  
+OrangeCheck now recognises **two equally native ways** to anchor a bond:
+
+1. **Taproot UTXO** – a fresh dust-threshold Pay-to-Taproot output (34 bytes of `scriptPubKey`, zero witness overhead).  
+2. **Lightning HTLC** – a *HOLD* invoice whose payment-hash sits in a pending HTLC; no on-chain bytes until the channel eventually closes.
+
+In both cases a **single BIP-322 signature** from the same key that locks the bond binds a canonical claim (`{handle, anchor_id, timestamp}`). Because that key can answer any challenge, the bond doubles as a reusable password-less login. Verification needs only one RPC call—`gettxout` for the on-chain path, or a BOLT-12/onion probe for the Lightning path—so identity travels anywhere plain JSON can travel, without registrars, side-tokens, or personal data and **without block-bloat** (HTLC badges add _zero_ block weight; UTXO badges can be batch-spent).
 
 ### How it works
 
-| Stage   | Action                                                                  | Purpose                                                          |
-|---------|--------------------------------------------------------------------------|------------------------------------------------------------------|
-| **Lock** | Fund a brand-new Taproot address (optionally timelocked)                | Create an on-chain bond priced in sats **and** time              |
-| **Bind** | Sign `{handle, outpoint, timestamp}` with the same key                  | Prove original custody of the coins                              |
-| **Verify** | Check the signature and call `gettxout`                               | Confirm the badge is genuine **and still funded**                |
-| **Auth** | Wallet signs a one-time nonce with the stake key                        | Live login: proves the handle is controlled *right now*          |
-| **Revoke** | Spend the coin                                                        | Credential auto-expires everywhere—no lists, no appeals          |
+| Stage | On-chain anchor (Taproot) | Off-chain anchor (Lightning) | Purpose |
+|-------|---------------------------|------------------------------|---------|
+| **Lock** | Fund a brand-new Taproot address (optionally with a CLTV leaf) | Publish a HOLD invoice from the user’s node/LSP and withhold the pre-image | Create a bond priced in sats (and optionally time) |
+| **Bind** | Sign `{handle, "<txid>:<vout>", t}` with the stake key | Sign `{handle, "<payment_hash>:ln", t}` with the same key | Prove initial custody |
+| **Verify** | Check sig → `gettxout` | Check sig → HTLC-status probe | Confirm badge is genuine **and still funded** |
+| **Auth** | Wallet signs a server-nonce with stake key | Same | Live login proves handle is controlled *right now* |
+| **Revoke** | Spend the UTXO (can batch) | Settle or let HTLC timeout | Badge auto-expires everywhere—no lists, no appeals |
 
 ### Interpretation at the edge
 
-The protocol exposes only two immutable facts—*value* and *liveness*—leaving each community free to set its own policy:
+OrangeCheck still exposes only two immutable facts—*value* and *liveness*—plus an easily derived *uptime* (block-height or CLTV age). Each community maps those into its own rules:
 
 * **Badge** · valid ≥ threshold  
-* **Weight** · linear, square-root, or timelock-boost  
-* **Quorum** · sum of stake required for a vote  
+* **Weight** · linear, √value, stake × age, etc.  
+* **Quorum / credit line** · sum of (stake × age) required for action  
 
-Because cost rises linearly with sats locked, the economic price of Sybil attacks scales in step, while legitimate users stake once and reuse the same credential anywhere a Bitcoin RPC is reachable. Revocation is as simple, instant, and final as spending the coins. In short, OrangeCheck makes portable, cross-platform identity—and its authentication—a first-class, self-auditing function of Bitcoin itself.  
+Because the cost of a Sybil attack rises linearly with sats (and meter-time) locked, honest users stake once—on-chain or off-chain—and reuse the same credential and login secret anywhere a Bitcoin RPC or Lightning onion probe is reachable. Revocation is as simple, instant, and final as spending the coin or settling the invoice, keeping the core forever *one bond, one sig*.
 
 ---
 
 ## 3. Economic & Philosophical Rationale  
 
-Digital identity is usually weightless: an e-mail or username can be conjured, abandoned, or multiplied at near-zero cost, so its claims are equally disposable. OrangeCheck restores **ontological heft** by tying a handle to something that cannot be faked more cheaply than it is created—Bitcoin’s proof-of-work.  
+Digital identity is usually **weightless**: a handle or e-mail can be spawned, abandoned, or multiplied at near-zero cost, so its promises are priced at zero. OrangeCheck re-anchors identity to *expended energy* by making every handle sit atop a forfeitable Bitcoin bond—**either** a Taproot UTXO (hash-rate cost) **or** a Lightning HOLD HTLC (liquidity + routing-fee cost). In both paths the bond can be lost but never counterfeited more cheaply than it is created, reinstating economic gravity online.
 
 ### Identity as a Costly Signal  
-Economist Michael Spence described “costly signals” as actions so expensive that only sincere actors perform them. Locking sats in a Taproot UTXO is exactly that signal. The stake is:  
 
-* **Irreversible** – spending destroys the badge everywhere.  
-* **Quantifiable** – the amount and (optional) timelock are on-chain facts.  
-* **Universal** – 50,000 sats assert the same weight in Lagos as in San Francisco.  
+Following Michael Spence’s theory, proof of sincerity must be **expensive to fake and cheap to verify**. Locking sats under one key that can be slashed on misconduct satisfies that requirement:
 
-Thus reputation emerges from physics, not from paperwork or corporate rent. Bureaucratic KYC binds a name to a body but at the price of surveillance; blue-check subscriptions bind a name to monthly rent but not to character. OrangeCheck binds a name to sacrificed optionality—skin in the game.
+* **Forfeitable** – spend or settle the bond and the badge evaporates everywhere.  
+* **Quantifiable** – stake amount and (optional) timelock/CLTV are on-chain or probe-read facts.  
+* **Universal** – 50 000 sats or a 50 000-sat HOLD means the same in Lagos or San Francisco.  
+* **Accretive** – uninterrupted block-height / CLTV age compounds the signal without new writes.
+
+Thus reputation emerges from physics, not paperwork or corporate rent. Bureaucratic KYC ties a name to a body but leaks privacy; monthly blue-checks rent a badge but prove no skin in the game. OrangeCheck ties a name to *sacrificed optionality*—an earnest-money deposit that anyone can see but only its owner can reclaim.
 
 ### Persistence without Custodians  
-An identity should be *portable* and *intransient*: it must survive platform failures and political shifts. Because the stake lives on Bitcoin’s most censorship-resistant ledger, no registrar can confiscate it, and no nation can selectively invalidate it. The protocol needs:  
 
-* **No oracle** – the UTXO itself testifies.  
+A credible identity must survive platform failures, political shifts, and even block-space wars:
+
+* **No oracle** – the UTXO or HTLC itself testifies.  
 * **No committee** – rules are fixed; interpretation is local.  
 * **No personal dossier** – only coin and key matter.  
+* **No block bloat** – one 34-byte Taproot output per on-chain badge, zero bytes for Lightning badges until a channel closes.  
+
+Because the bond lives on Bitcoin’s most censorship-resistant rails, no registrar can confiscate it and no nation can selectively invalidate it.
 
 ### Adaptive Meaning at the Edge  
-OrangeCheck exports two immutable facts: *value* and *liveness*. Communities mold those into policy:
+
+OrangeCheck exports just two immutable facts—**value** and **liveness**—plus a derivable **uptime** (block or CLTV age). Every community is free to shape those into its own policy:
 
 | Context | Example Rule | Result |
 |---------|--------------|--------|
-| Hobby forum | ≥ 10 000 sats | Anti-spam badge |
-| Finance platform | ≥ 0.05 BTC & 6-month timelock | Regulatory-grade identity |
-| DAO voting | weight = √(sats) | Whale-resistant quorum |
+| Hobby forum | ≥ 10 000 sats (on-chain **or** HOLD) | Spam costs real money; badge = entry ticket |
+| Social feed | Badge valid & uptime > 30 days | “Orange tick” filter nukes sock-puppets |
+| Finance platform | ≥ 0.05 BTC + 6-month timelock | Regulatory-grade, password-less identity |
+| DAO voting | weight = √(stake × days_alive) | Whale slicing diluted, long-term stakers boosted |
+| Ride-share / SaaS | stake ≥ fare + 7-day uptime | On-the-spot credit without paperwork |
 
-The cost of a Sybil attack now rises linearly with sats at risk, while honest users stake once and reuse the same credential anywhere a Bitcoin RPC is reachable.
+Because Sybil cost rises linearly with sats (and meter-time) locked, honest users stake once—on-chain or off-chain—and reuse the same credential anywhere a Bitcoin RPC or Lightning probe is reachable.
 
-**In essence:** OrangeCheck revives the ancient earnest-money pledge and fuses it with thermodynamic finality. Identity is no longer a label floating in zero gravity; it is anchored to expended energy—an indelible, economically truthful record of commitment.
+**In essence:** OrangeCheck revives the ancient earnest-money pledge and fuses it with thermodynamic finality. Identity is no longer a frictionless label floating in zero gravity; it is anchored to expended energy and time—an indelible, economically truthful record of commitment that platforms can read in a single RPC round-trip.
 
 ---
 
 ## 4. Adoption Pathways & Policies  
 
-Because the stake key can answer any BIP-322 challenge, an OrangeCheck badge is both **identity and login**. The table shows how three very different communities exploit that dual use.
+Because the same key that guards the bond can answer any BIP-322 challenge, an OrangeCheck badge is simultaneously **identity** *and* **login**—no passwords, no OAuth round-trips. The table shows how four very different ecosystems plug in:
 
-| Actor & scale | Stake rule | Outcome (trust **+** auth) |
-|---------------|------------|----------------------------|
-| **Agora** – global social feed | ≥ 0.001 BTC, 6 conf | “Orange tick” + password-less sign-in; bot spam drops > 50 % because 10 k accounts now cost ≈ 10 BTC. |
-| **Stacktown** – specialist forum | Vote weight = √(sats) with 100 k-sat floor | Whale influence fades; users log in by signing a nonce instead of storing site passwords. |
-| **Common-Pool DAO** – treasury governance | ≥ 0.005 BTC, 6-month timelock | Second-chamber quorum resists flash loans; proposals and ballots are authenticated by stake key. |
+| Actor & scale | Anchor + Rule | Outcome (trust **+** auth) |
+|---------------|---------------|----------------------------|
+| **WorldSquare** – global social feed | **≥ 20 000 sat** bond (Taproot **or** HOLD, ≥ 6 conf/24 h uptime) | “Orange tick” filter removes 80 % of bot replies; users sign a nonce for password-less login. |
+| **GuildPad** – specialist dev forum | Vote weight = √(stake × days_alive) with **≥ 50 000 sat** floor (Taproot) | Whale slicing diluted; long-term contributors gain voice; login is BIP-322 challenge. |
+| **HODLride** – P2P ride-share | HOLD invoice ≥ fare + 10 000 sat, uptime ≥ 1 day | Driver sees rider’s live deposit; no-show slashes bond; both parties authenticate with the same key. |
+| **TreasuryDAO** – governed multisig | **≥ 0.01 BTC** + 6-month CLTV timelock | Second-chamber quorum resists flash-loan Sybils; proposals/ballots signed by stake key; badge expires automatically when funds unlock. |
 
-Integration is trivial: import the verifier, set a threshold or curve, add a **“Sign with OrangeCheck”** button. No side token, no registry, and users stake once then reuse the same credential—and login secret—everywhere a Bitcoin RPC is reachable.
+### Drop-in integration
 
-Edge cases follow the same rule of coin-truth: lose the key, re-stake; need a temporary badge, pick a short timelock; require anonymity, fund via CoinJoin. One question settles trust and authentication alike—*is the coin still there?*—and forging that answer costs at least as much work as the Bitcoin it anchors.
+* **Client side** – call the 150-LoC `oc-verifier` (Rust/TS/Swift).  
+* **Login** – use the *OC-OIDC* bridge so a BIP-322 sig satisfies the OIDC `id_token` flow.  
+* **On-chain check** – one `gettxout`; **Lightning check** – one BOLT-12 onion probe.  
+* **No side token, no registry** – users bond once then reuse the same badge (and login secret) everywhere a Bitcoin RPC *or* Lightning routing node is reachable.
 
-By pricing handles in sats and time **and** re-using the same key for live sign-in, OrangeCheck turns identity into a scarce, password-free resource: simple for honest speakers to hold, linearly expensive for spammers to fake.
+### Operational guidelines
 
----
+* **Lost key?** Re-stake and repost the claim.  
+* **Short-term need?** Pick a small HOLD timeout or low CLTV.  
+* **Anonymity?** CoinJoin funding or submarine-swap into Taproot keeps provenance dark.  
+* **Sybil tuning?** If attack cost looks low, raise stake floor or demand longer uptime.
 
-## 5. Security & Threat Model  
-
-OrangeCheck’s narrow waist—one UTXO, one signature—shrinks attack surface, but some risks (non-specific to the protocol) should be considered:
-
-| Threat | Consequence | Mitigation |
-|--------|-------------|------------|
-| **Key theft** | Thief spends stake → badge evaporates; can impersonate until spend confirms. | Treat stake key like deep-cold storage or 2-of-2 multisig. |
-| **Whale Sybil** | Rich actor slices balance into many outputs to gain influence. | Communities weight non-linearly (√ value, log) or raise thresholds. |
-| **Custodial UTXO reuse** | Exchange re-signs or re-spends a customer’s stake. | Verifiers blacklist known custodial clusters; users fund from self-custody. |
-| **Deep re-org** | Badge flickers if stake tx is rolled back. | Relying apps wait ≥ 12 confirmations when continuity critical. |
-| **DoS via fake claims** | Verifiers flooded with look-ups. | Only process claims submitted through local channels; no global crawl. |
-| **Quantum break** | secp256k1 compromised. | OrangeCheck upgrades in lock-step with any post-quantum Bitcoin fork. |
-
-In every case failure degrades gracefully to first principles: if the coin is gone, the badge is gone; if cost is low, weight can be discounted. Security rises no higher—and sinks no lower—than Bitcoin’s UTXO model plus community policy.
+By pricing handles in sats **and** meter-time, then recycling the same key for live sign-in, OrangeCheck turns identity into a scarce, password-free resource—simple for honest users, linearly expensive for spammers.
 
 ---
 
-## 6. Formal Specification
+## 5. Formal Specification
 
 > This section freezes the invariant core of the protocol. Everything beyond these rules—gateways, weighting curves, user-interface conventions—is non-normative and may evolve without revision to the specification.
 
-### 6.1 Notation and Pre-requisites
+### 5.1 Notation and Pre-requisites
 
 * **BTC** denotes the Bitcoin blockchain mainnet, consensus rules as of Taproot activation (BIP-341/342).
 * **UTXO** = unspent transaction output.
@@ -150,11 +157,11 @@ The verifier is assumed to possess:
 1. A fully-validating Bitcoin node or trusted proxy that exposes the RPC method `gettxout(txid string, n int, include_mempool bool) -> json`.
 2. A BIP-322 signature engine for both ECDSA (legacy) and Schnorr (preferred).
 
-### 6.2 Stake Output Construction
+### 5.2 Stake Output Construction
 
 The credential’s anchor is a Taproot key-path spend, optionally augmented by a CLTV script path to add a time cost.
 
-#### 6.2.1 Key-path only (minimal form)
+#### 5.2.1 Key-path only (minimal form)
 
 ```text
 scriptPubKey = OP_1 <32-byte-X-only-pubkey>
@@ -165,7 +172,7 @@ value        ≥  dust_limit + relay_fee
 - `relay_fee` is the node’s minimum feerate (e.g., 1 sat/vB).
 - There is no `OP_CHECKLOCKTIMEVERIFY` branch; spendability is instant.
 
-#### 6.2.2 Key-path + CLTV script-path (timelocked form)
+#### 5.2.2 Key-path + CLTV script-path (timelocked form)
 
 The Taproot Merkle tree commits to one additional leaf:
 
@@ -182,7 +189,7 @@ The TapTweak is computed per BIP-341; the key-path public key remains the same 3
 
 Wallets MAY also set a transaction-level `nLockTime`; verifiers MUST ignore it when computing liveness or weight, because it ceases to matter once the funding transaction is mined.
 
-### 6.3 Canonical Claim
+### 5.3 Canonical Claim
 
 A claim is a UTF-8 JSON document without extra whitespace; keys are sorted lexicographically. Version 1 has four keys:
 
@@ -213,7 +220,7 @@ C = utf8_bytes(concat(
 
 Notice the key order `h,t,u,v`. Version numbers other than `1` MUST cause the verifier to reject.
 
-### 6.4 Signature Procedure (BIP-322)
+### 5.4 Signature Procedure (BIP-322)
 
 Let **pk** be the X-only key that controls the _key-path_ of the stake output. The signature domain is:
 
@@ -226,7 +233,7 @@ The resulting `sig` is 64 bytes for Schnorr or 71-73 bytes DER for ECDSA.
 
 Publish **(C, sig)** together. For human-readable media (Twitter, Nostr) the signature should be base64url-encoded.
 
-### 6.5 Deterministic Verification Algorithm
+### 5.5 Deterministic Verification Algorithm
 
 The following pseudocode is normative.
 
@@ -265,7 +272,7 @@ def verify_orange(handle, claim_json, sig, threshold_sat, height_now):
 
 A verifier MUST treat any failure case as invalid except `utxo is None`, which is **revoked**.
 
-### 6.6 Weight Semantics (Non-normative)
+### 5.6 Weight Semantics (Non-normative)
 
 The protocol guarantees only the numeric value of the stake in satoshis. A relying service MAY map that to influence by:
 
@@ -276,13 +283,13 @@ The protocol guarantees only the numeric value of the stake in satoshis. A relyi
 
 Such transforms occur entirely off-chain; they do not affect interop.
 
-### 6.7 Revocation Semantics
+### 5.7 Revocation Semantics
 
 - Spending the output in any transaction—key path or script path—causes `gettxout` to return null.
 - Re-orgs that drop the funding transaction result in immediate revocation until the transaction is re-mined.
 - There is no grace period; credential liveness equals UTXO existence.
 
-### 6.8 Reference REST Envelope (optional)
+### 5.8 Reference REST Envelope (optional)
 
 Gateways MAY expose a convenience API. The following schema is RECOMMENDED but not required for interoperability.
 
@@ -304,13 +311,13 @@ GET /oc/verify/@alice
 
 No authentication is mandated. Gateways SHOULD rate-limit by IP and cache positive lookups for ≤ 10 seconds.
 
-### 6.9 Extensibility 
+### 5.9 Extensibility 
 
 - Unknown top-level keys in the JSON claim MUST cause a verifier to reject. Future versions increase `"v"` and document new keys.
 - A `meta` field MAY be introduced in a later version to carry a SHA-256 of auxiliary data (avatar, credentials). Verifiers that do not understand it ignore that data while still validating stake.
 - Post-quantum migration will follow whatever curve Bitcoin selects; the stake output then uses the new key type without altering higher layers.
 
-### 6.10 Test Vectors
+### 5.10 Test Vectors
 
 | Case        | txid : vout                                   | Value (sat) | CLTV height | Handle  | Canonical Hash (SHA-256, hex) | Signature (base64url, truncated) |
 |-------------|-----------------------------------------------|----------|------------|---------|------------------------------|----------------------------------|
@@ -320,7 +327,7 @@ No authentication is mandated. Gateways SHOULD rate-limit by IP and cache positi
 
 A reference verifier in Rust and Python with the above vectors will be published in the `oc` repository. The test vectors are not normative but are provided to illustrate the protocol’s behaviour.
 
-### 6.11 Linkability and Anti-Surveillance Best-Practices
+### 5.11 Linkability and Anti-Surveillance Best-Practices
 
 1. **CoinJoin / PayJoin funding** – create the stake from mixed coins so the UTXO cannot be trivially traced backwards.  
 2. **LN → on-chain submarine swap** – fund the Taproot output without revealing your source node.  
@@ -330,7 +337,7 @@ A reference verifier in Rust and Python with the above vectors will be published
 
 Following these practices keeps OrangeCheck a *proof-of-cost* signal rather than a surveillance beacon.
 
-### 6.12 Versioning and Change-Control
+### 5.12 Versioning and Change-Control
 
 * **Semantic flag** – Every claim includes `"v": n`; verifiers **MUST** reject unknown majors.  
 * **OCP process** – Changes are proposed as **OrangeCheck Proposals** (markdown + reference code) in the public repo. Three independent impl-reports required.  
