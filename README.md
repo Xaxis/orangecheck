@@ -9,9 +9,9 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
 
 1. [Abstract](#1-abstract)
 2. [Protocol Overview](#2-protocol-overview)
-3. [Economic and Philosophical Rationale](#3-economic-and-philosophical-rationale)
-4. [Adoption Pathways and Policies](#4-adoption-pathways-and-policies)
-5. [Security and Threat Model](#5-security-and-threat-model)
+3. [Economic and Philosophical Rationale](#3-economic--philosophical-rationale)
+4. [Adoption Pathways and Policies](#4-adoption-pathways--policies)
+5. [Security and Threat Model](#5-security--threat-model)
 6. [Formal Specification](#6-formal-specification)
    + 6.1 [Notation and Pre-requisites](#61-notation-and-pre-requisites)
    + 6.2 [Stake-Output Construction](#62-stake-output-construction)
@@ -62,7 +62,7 @@ Because cost rises linearly with sats locked, the economic price of Sybil attack
 
 ---
 
-## 3. Economic and Philosophical Rationale  
+## 3. Economic & Philosophical Rationale  
 
 Digital identity is usually weightless: an e-mail or username can be conjured, abandoned, or multiplied at near-zero cost, so its claims are equally disposable. OrangeCheck restores **ontological heft** by tying a handle to something that cannot be faked more cheaply than it is created—Bitcoin’s proof-of-work.  
 
@@ -97,7 +97,7 @@ The cost of a Sybil attack now rises linearly with sats at risk, while honest us
 
 ---
 
-## 4. Adoption Pathways and Policies  
+## 4. Adoption Pathways & Policies  
 
 Because the stake key can answer any BIP-322 challenge, an OrangeCheck badge is both **identity and login**. The table shows how three very different communities exploit that dual use.
 
