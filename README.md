@@ -423,7 +423,7 @@ Response `201 Created` or `400 Bad Request`.
 
 Return live status plus minimal context.
 
-```json
+```text
 // Taproot badge
 {
   "status" : "valid",          // "valid" | "revoked" | "invalid"
