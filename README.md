@@ -41,7 +41,7 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
 
 ## 2. Protocol Overview
 
-OrangeCheck now recognises **two equally native ways** to anchor a bond:
+OrangeCheck recognises **two equally native ways** to anchor a bond:
 
 1. **Taproot UTXO** – a fresh dust-threshold Pay-to-Taproot output (34 bytes of `scriptPubKey`, zero witness overhead).  
 2. **Lightning HTLC** – a *HOLD* invoice whose payment-hash sits in a pending HTLC; no on-chain bytes until the channel eventually closes.
