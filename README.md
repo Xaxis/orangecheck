@@ -21,9 +21,11 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
    + 5.3 [Canonical Claim](#53-canonical-claim)
    + 5.4 [Signature Procedure](#54-signature-procedure)
    + 5.5 [Deterministic Verification Algorithm](#55-deterministic-verification-algorithm)
-   + 5.6 [Weight Semantics (non-normative)](#56-weight-semantics-non-normative)
+   + 5.6 [Weight & Credit Semantics (non-normative)](#56-weight--credit-semantics-non-normative)
    + 5.7 [Revocation Semantics](#57-revocation-semantics)
-   + 5.8 [Reference REST Envelope (optional)](#58-reference-rest-envelope-optional)
+   + 5.8 [Reference REST Envelope (optional helper API)](#58-reference-rest-envelope-optional-helper-api)
+     + 5.8.1 [POST `/oc/claim`](#581-post-oc-claim)
+     + 5.8.2 [POST `/oc/verify/<handle>`](#582-post-oc-verify-handle) 
    + 5.9 [Extensibility](#59-extensibility)
    + 5.10 [Test Vectors](#510-test-vectors)
    + 5.11 [Linkability & Anti-Surveillance Best-Practices](#511-linkability-and-antisurveillance-best-practices)
@@ -266,7 +268,7 @@ A **claim** is a UTF-8 JSON document without extra whitespace; object keys **mus
 
 If `v` is anything other than `1`, the verifier MUST reject. Unknown additional keys are forbidden in version 1; future versions will either increment `v` or introduce an explicit `meta` object.
 
-### 5.4  Signature Procedure  (BIP-322)
+### 5.4 Signature Procedure  (BIP-322)
 
 Each claim is signed once with **pk**, a BIP-340 X-only public key controlled by the badge owner.
 
@@ -289,115 +291,214 @@ Publish **(C, sig)** together. For human-readable media (Twitter, Nostr) the sig
 
 ### 5.5 Deterministic Verification Algorithm
 
-The following pseudocode is normative.
+The verifier MUST execute the following steps exactly; any deviation risks accepting forged or revoked badges.
 
-```
+```python
 def verify_orange(handle, claim_json, sig, threshold_sat, height_now):
-    # 1. Parse and basic-sanity
+    """
+    Returns one of: Valid(weight, confs_or_expiry),
+                    Revoked(),
+                    Invalid(reason)
+    """
+
+    # 0. Parse & canonical-bytes recreation
     obj = json.loads(claim_json)
-    if obj["v"] != 1 or obj["h"] != handle:
+    C   = canonical_bytes(obj)             # h,t,u,(k,)v in order
+    if obj.get("v") != 1 or obj["h"] != handle:
         return Invalid("malformed or mismatched handle")
 
-    txid, vout_str = obj["u"].split(":")
-    vout = int(vout_str)
+    # 1. Extract anchor type
+    anchor, suffix = obj["u"].split(":")
+    is_ln  = (suffix == "ln")
+    is_txo = not is_ln
 
-    # 2. Signature check (BIP-322)
-    msg_hash = sha256(claim_json.encode("utf-8"))
-    pk = extract_pubkey_from_utxo(txid, vout)   # see step 3
+    # 2. Obtain pubkey for sig-check
+    if is_txo:
+        txid, vout = anchor, int(suffix)   # (swap vars)
+        pk = extract_pubkey_from_utxo(txid, vout)
+    else:                                  # Lightning
+        pk_hex = obj.get("k")
+        if pk_hex is None or len(pk_hex) != 64:
+            return Invalid("missing pubkey for ln claim")
+        pk = bytes.fromhex(pk_hex)
+
+    # 3. Signature check (BIP-322)
+    msg_hash = sha256(C)
     if not bip322_verify(pk, msg_hash, sig):
         return Invalid("bad signature")
 
-    # 3. On-chain status
-    utxo = gettxout(txid, vout, include_mempool=False)
-    if utxo is None:
-        return Revoked()
+    # 4. Anchor liveness & value
+    if is_txo:
+        utxo = gettxout(txid, vout, include_mempool=False)
+        if utxo is None:
+            return Revoked()
+        value_sat = satoshi(utxo["value"])
+        if value_sat < threshold_sat:
+            return Invalid("below weight threshold")
 
-    value_sat = satoshi(utxo["value"])
-    if value_sat < threshold_sat:
-        return Invalid("below weight threshold")
+        cltv_height = parse_cltv_if_present(utxo["scriptPubKey"])
+        if cltv_height and height_now >= cltv_height:
+            return Invalid("timelock expired")
 
-    cltv_height = parse_cltv_if_present(utxo["scriptPubKey"])
-    if cltv_height and height_now >= cltv_height:
-        return Invalid("timelock expired")
+        weight = value_sat
+        confid = utxo["confirmations"]
+        return Valid(weight, confid)
 
-    weight = value_sat  # verifiers may apply non-linear transforms
-    return Valid(weight, confirmations=utxo["confirmations"])
+    else:   # Lightning HOLD HTLC
+        htlc = lookup_htlc(anchor)     # anchor == payment_hash
+        if htlc is None or htlc["state"] != "PENDING":
+            return Revoked()
+        if height_now >= htlc["cltv_expiry"]:
+            return Invalid("htlc expired")
+
+        value_sat = htlc["value_msat"] // 1000
+        if value_sat < threshold_sat:
+            return Invalid("below weight threshold")
+
+        weight = value_sat
+        time_to_expiry = htlc["cltv_expiry"] - height_now
+        return Valid(weight, time_to_expiry)
 ```
 
-A verifier MUST treat any failure case as invalid except `utxo is None`, which is **revoked**.
+- Anchor not found (`utxo is None` or `htlc.state ∉ PENDING`) ⇒ `Revoked()`.
+- Any parsing, signature, or threshold failure ⇒ `Invalid()`.
+- `threshold_sat` is a policy input; verifiers MAY apply non-linear transforms to `weight` after acceptance.
 
-### 5.6 Weight Semantics (Non-normative)
+### 5.6 Weight & Credit Semantics (Non-normative)
 
-The protocol guarantees only the numeric value of the stake in satoshis. A relying service MAY map that to influence by:
+The protocol guarantees only two anchor facts—**stake value (sat)** and **liveness**—plus an easily derived **uptime**:
 
-- **Binary** (valid ≥ threshold ⇒ badge).
-- **Linear** (weight = value).
-- **Quadratic** weight = ⌊sqrt(value)⌋.
-- **Timelock** bonus weight = value × (1 + months_locked/12).
+| Anchor | Stake (`S`) | Uptime (`U`) |
+|--------|-------------|--------------|
+| Taproot UTXO | `value_sat` | `height_now – funding_height`  (blocks ≈ ~10 min) |
+| Lightning HOLD | `value_msat // 1000` | `cltv_expiry – height_now`  (blocks until timeout) |
 
-Such transforms occur entirely off-chain; they do not affect interop.
+Relying services are free to transform `S` and `U` into influence or credit. Examples:
 
-### 5.7 Revocation Semantics
+| Transform | Formula | Use-case |
+|-----------|---------|---------|
+| **Binary badge** | valid `∧` (`S ≥ T`) | Spam filter |
+| **Linear stake** | `W = S` | Simple pay-to-speak |
+| **Quadratic** | `W = ⌊√S⌋` | DAO vote dilution |
+| **Stake × Uptime** | `W = S × U` | Rewards long-held badges |
+| **Whale-resistant credit** | `W = ⌊√(S × U)⌋` | On-the-spot micro-credit |
+| **Timelock boost** | `W = S × (1 + months_locked / 12)` | Favour long CLTV |
 
-- Spending the output in any transaction—key path or script path—causes `gettxout` to return null.
-- Re-orgs that drop the funding transaction result in immediate revocation until the transaction is re-mined.
-- There is no grace period; credential liveness equals UTXO existence.
+All transforms are **off-chain** and can be changed without touching the core spec.
 
-### 5.8 Reference REST Envelope (optional)
+### 5.7 Revocation Semantics  
 
-Gateways MAY expose a convenience API. The following schema is RECOMMENDED but not required for interoperability.
+| Anchor type | Automatic-revocation trigger | Notes |
+|-------------|-----------------------------|-------|
+| **Taproot UTXO** | The output is spent in **any** transaction (key-path or script-path). | Batch spends are fine; badge disappears the moment `gettxout` returns `null`. |
+| **Lightning HOLD HTLC** | `state ∉ PENDING` (i.e., `SETTLED`, `FORWARDED`, or timed-out) | A force-close moves the HTLC on-chain; if it times-out on chain the badge is revoked exactly the same way. |
 
-```
-POST /oc/claim
+Additional rules  
+
+* **Re-orgs** – If the original funding transaction is rolled back, verifiers will see `gettxout == null`; badge is *temporarily* revoked until the tx confirms again.  
+* **No grace period** – Credential liveness is a direct boolean view of the anchor.  
+* **Delegated 2-of-2 anchors** – A unilateral close by either party counts as a spend/settle and thus revokes the badge.  
+
+> In short: **coin (or HTLC) present → badge live; coin/HTLC gone → badge dead.** Nothing in between.
+
+### 5.8 Reference REST Envelope *(optional helper API)*  
+
+Implementers may expose a thin HTTP wrapper so front-ends can verify badges without bundling a full Bitcoin/LN stack.  
+The schema below is **non-normative**—clients can skip it and talk to the verifier library directly.
+
+#### 5.8.1 POST `/oc/claim`
+
+Store or relay a new claim.
+
+```json
 {
-  "claim": "<canonical JSON>",
-  "sig"  : "<base64url>"
+  "claim": "{...canonical JSON...}",
+  "sig"  : "Base64URL(BIP322-sig)"
+}
+```
+
+Response `201 Created` or `400 Bad Request`.
+
+#### 5.8.2 POST `/oc/verify/<handle>`
+
+Return live status plus minimal context.
+
+```json
+// Taproot badge
+{
+  "status" : "valid",          // "valid" | "revoked" | "invalid"
+  "weight" : "125000",         // sat
+  "confs"  : 12,               // current confirmations
+  "anchor" : "f0c1ad71…:0"
 }
 
-GET /oc/verify/@alice
-→
+// Lightning badge
 {
-"status" : "valid",
-"weight" : "125000",
-"confs"  : 9
+  "status"   : "valid",
+  "weight"   : "25000",        // sat
+  "blocks_to_expiry" : 720,    // remaining blocks before CLTV timeout
+  "anchor"   : "a4b0d2f8…:ln"
 }
 ```
 
-No authentication is mandated. Gateways SHOULD rate-limit by IP and cache positive lookups for ≤ 10 seconds.
+**Behaviour guidelines**
 
-### 5.9 Extensibility 
+* **No authentication required** – data are public; rate-limit by IP.  
+* **Cache** – positive lookups **MAY** be cached up to 10 s; negative results (`revoked` / `invalid`) **SHOULD NOT** be cached.  
+* **Lightning probes** – if the backend cannot reach an LN node, return `{ "status": "indeterminate" }` with HTTP `202`.
 
-- Unknown top-level keys in the JSON claim MUST cause a verifier to reject. Future versions increase `"v"` and document new keys.
-- A `meta` field MAY be introduced in a later version to carry a SHA-256 of auxiliary data (avatar, credentials). Verifiers that do not understand it ignore that data while still validating stake.
-- Post-quantum migration will follow whatever curve Bitcoin selects; the stake output then uses the new key type without altering higher layers.
+### 5.9 Extensibility  
 
-### 5.10 Test Vectors
+| Aspect | Rule | Rationale |
+|--------|------|-----------|
+| **Top-level keys** | A verifier **MUST** reject any claim whose top-level keys differ from the allowed set for `v = 1`:<br>`{h, t, u, v}` for Taproot anchors;<br>`{h, t, u, k, v}` for Lightning anchors. | Keeps canonical-bytes deterministic and prevents silent feature creep. |
+| **`meta` object** | Future versions MAY introduce an optional `"meta"` field that contains a SHA-256 hash of auxiliary off-chain data (e.g., avatar or credentials). Verifiers that do not recognise it **ignore** the data while still validating stake. | Allows richer credentials without bloating the core or harming old clients. |
+| **Anchor types** | New anchor types (e.g., RGB, Ark) MUST be encoded as `"<anchor_id>:<suffix>"`, where `suffix` is a *reserved* string; acceptance requires a new major version **or** an explicit OCP (OrangeCheck Proposal) marked “minor-compatible”. | Clean namespace, no collisions with `:ln`. |
+| **Message format** | Any change that alters canonical serialisation order or signature domain increments the **major** version (`v = 2`, `3`, …). Old verifiers MUST reject unknown majors. | Ensures downgrade safety. |
+| **Crypto agility** | Post-quantum migration follows whatever curve or signature scheme Bitcoin adopts; the anchor will then use the new key type without modifying higher layers. | Keeps OrangeCheck aligned with Bitcoin consensus. |
+| **Process** | All changes are proposed as **OCPs** (markdown + reference code) in the public repo. Three independent implementation reports are required before merging. | Transparent, no gatekeeper. |
+| **Activation** | A new major version activates when **≥ 90 %** of *weighted* live stakes (by sat) have re-signed over a 12-month window. | User-driven upgrade path; no central switch-flip. |
 
-| Case        | txid : vout                                   | Value (sat) | CLTV height | Handle  | Canonical Hash (SHA-256, hex) | Signature (base64url, truncated) |
-|-------------|-----------------------------------------------|----------|------------|---------|------------------------------|----------------------------------|
-| Minimal     | `8c1f…6c3a:0`                                 | 100000   | —          | `@test` | `0be2c7…4a5d`                | `MEYCIQD…`                       |
-| Timelocked  | `ab9d…09ff:1`                                 | 500000   | 840000     | `@lock` | `f1a6d4…219c`                | `AkEAh…`                         |
-| Bad-sig     | *same outpoint as “Minimal”*                  | 100000   | —          | `@fake` | `7c94e1…b02a`                | — (invalid)                      |
+### 5.10 Test Vectors  
 
-A reference verifier in Rust and Python with the above vectors will be published in the `oc` repository. The test vectors are not normative but are provided to illustrate the protocol’s behaviour.
+| Case | Claim JSON (canonical, abridged) | Anchor live? | Expected result | Notes |
+|------|----------------------------------|--------------|-----------------|-------|
+| **Taproot · Minimal** | `{"h":"@mini","t":1718000000,"u":"8c1f…6c3a:0","v":1}` | UTXO unspent, value = 100 000 sat | `Valid(weight=100 000, confs=12)` | Key-path only, 12 confs |
+| **Taproot · Timelock** | `{"h":"@lock","t":1718000100,"u":"ab9d…09ff:1","v":1}` | UTXO unspent, CLTV not reached, value = 500 000 sat | `Valid(weight=500 000, confs=6)` | Script-path CLTV = 840 000 |
+| **Taproot · Spent** | *same claim as “Minimal”* | UTXO **spent** | `Revoked()` | Spend seen in chain |
+| **Lightning · HOLD live** | `{"h":"@bob","t":1718000200,"u":"a4b0d2f8c0e7…9f12:ln","k":"02fd…a9c7","v":1}` | `HTLC.state = PENDING`, value = 25 000 sat, expiry = +720 blocks | `Valid(weight=25 000, blocks_to_expiry=720)` | HOLD invoice in user-run node |
+| **Lightning · Settled** | *same claim as above* | `HTLC.state = SETTLED` | `Revoked()` | Pre-image revealed |
+| **Lightning · Bad-sig** | JSON as above, but signature byte flipped | — | `Invalid("bad signature")` | Signature fails |
+
+Reference verifier implementations (Rust, Python) and the full claim + signature strings are published in the `/test_vectors` directory of the repository. These vectors are **illustrative**, not normative; any implementation that passes them **and** the algorithm in § 5.5 is considered conformant.
 
 ### 5.11 Linkability and Anti-Surveillance Best-Practices
 
-1. **CoinJoin / PayJoin funding** – create the stake from mixed coins so the UTXO cannot be trivially traced backwards.  
-2. **LN → on-chain submarine swap** – fund the Taproot output without revealing your source node.  
-3. **One-time handles** – use separate stakes for unrelated personas (e.g., whistle-blowing vs. social).  
-4. **MuSig2 / FROST multisig** – hide the signer set; chain observers see only one X-only key.  
-5. **Avoid address reuse** – never post the same Taproot public key in other contexts.
 
-Following these practices keeps OrangeCheck a *proof-of-cost* signal rather than a surveillance beacon.
+OrangeCheck is **pseudonymous** by default—no personal data is baked into the claim—but careless funding or routing can still leak linkage. Below are optional techniques to keep provenance dark.
 
-### 5.12 Versioning and Change-Control
+| Anchor type | Threat | Mitigation |
+|-------------|--------|------------|
+| **Taproot UTXO** | Chain analysts trace the funding coins back to a KYC exchange. | 1. Fund via **CoinJoin / PayJoin**.<br>2. Use an LN-to-Taproot **submarine swap**, then broadcast the funding tx from your own node.<br>3. Never reuse the same X-only key in other contexts.<br>4. Hide signer set with **MuSig2 / FROST**. |
+| **Lightning HOLD** | The source node ID or channel graph reveals your real-world IP / identity. | 1. Run your node behind **Tor** or an LSP that offers blinded paths.<br>2. Use **BOLT-12 offers** + **onion-message** so the public cannot query your node by pubkey.<br>3. Regenerate a fresh node alias (and HOLD invoice) per separate persona.<br>4. If maximum privacy is needed, loop funds out through a mixed on-chain output first, then back into a private channel. |
+| **Both** | Same bond reused across unrelated personas links them. | Spin up distinct stakes (and keys) per persona or per context (e.g., whistle-blowing vs. social). |
 
-* **Semantic flag** – Every claim includes `"v": n`; verifiers **MUST** reject unknown majors.  
-* **OCP process** – Changes are proposed as **OrangeCheck Proposals** (markdown + reference code) in the public repo. Three independent impl-reports required.  
-* **Activation rule** – A new major version activates when ≥ 90 % of *weighted* live stakes have re-signed over 12 months. No committee can override; the community signals by moving its own coins.  
-* **Narrow-waist mandate** – The core will *not* add global registries, alt-chains, or rent tokens. Such ideas fork into a brand-new major version.
+Remember: verifiers see only the **anchor id**, never the funding path—but adversaries observing the chain or gossip network might still link you unless the above hygiene is followed.
 
----
+### 5.12 Versioning and Change-Control  
 
-> _The specification above constitutes the entire OrangeCheck protocol: build a Taproot stake, sign a canonical claim, and let every verifier on Earth rest its decision on a single, immutable fact—“does the coin still sit where the claim says it does?” All higher-order meaning flows from that fact and is free to evolve without another change to these rules._
+OrangeCheck follows a **community-driven, coin-weighted upgrade path** that protects both users and integrators from surprise breakage.
+
+| Item | Rule | Why |
+|------|------|-----|
+| **Semantic flag** | Every claim carries `"v": n`.<br>Verifiers **MUST** hard-fail on unknown majors. | Prevents downgrade and ambiguous parsing. |
+| **Minor vs major** | *Minor* change = adds optional fields or new anchor **suffix** (`":ark"`). Old verifiers ignore.<br>*Major* change = alters canonical serialisation, signature domain, or verification logic. Requires `v++`. | Keeps the “narrow waist” stable. |
+| **OrangeCheck Proposal (OCP)** | All spec changes are filed as Markdown + reference code PRs. Must cite security analysis and test vectors. | Open, auditable process similar to BIPs/BOLTs. |
+| **Implementation reports** | An OCP is **eligible** after three independent, interoperable implementations pass the reference vectors. | Ensures real-world viability. |
+| **Activation threshold** | A new **major** version activates when **≥ 90 %** of *weighted* live stakes (sat + msat // 1000) have re-signed to the new version during a 12-month look-back window. | Coin-weighted voting aligns with “skin-in-the-game.” |
+| **Grace period** | Minor features become *recommended* immediately after merge; they never invalidate v-1 claims. | Optional adoption, zero churn. |
+| **Narrow-waist mandate** | Core MUST remain: one bond, one sig, two liveness probes (`gettxout`, HTLC lookup). Any design that adds global registries, alt-tokens, or persistent gossip **forks** into a new major. | Preserves simplicity, avoids feature drag. |
+| **Crypto agility** | If Bitcoin adopts a new signature scheme (e.g., post-quantum), OrangeCheck **inherits** it: anchors shift to the new key type; spec version only bumps **minor** as canonical order stays intact. | Future-proof without hard reset. |
+| **Emergency bug-out** | If a consensus bug or catastrophic vuln requires revoking all v-1 badges, the recovery path is: ① spend/settle old anchors; ② re-issue claim with `v=1, rev=2` (hot-fix sub-field); ③ major rev follows standard process. | Gives operators an immediate kill-switch while preserving orderly upgrade governance. |
+
+> **TL;DR –** The protocol is governed by *coins, code, and community*—no foundation, no trademark licence, no central veto. If you stake value on OrangeCheck, you automatically hold a vote.
