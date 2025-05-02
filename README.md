@@ -13,9 +13,11 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
 4. [Adoption Pathways & Policies](#4-adoption-pathways--policies)
 5. [Formal Specification](#5-formal-specification)
    + 5.1 [Notation and Pre-requisites](#51-notation-and-pre-requisites)
-   + 5.2 [Stake-Output Construction](#52-stake-output-construction)
-     + 5.2.1 [Key-path Only](#521-key-path-only-minimal-form)
-     + 5.2.2 [Key-path + CLTV Script-path](#522-key-path--cltv-script-path-timelocked-form)
+   + 5.2 [Stake-Anchor Construction](#52-stake-anchor-construction)
+     + 5.2.1 [Taproot Key-path Only](#521-taproot-key-path-only-minimal-form)
+     + 5.2.2 [Taproot + CLTV Script-path (timelocked form)](#522-key-path--cltv-script-path-timelocked-form)
+     + 5.2.3 [Lightning HOLD-HTLC anchor](#523-lightning-hold-htlc-anchor)
+     + 5.2.4 [Delegated 2-of-2 option (non-mandatory)](#524-delegated-2-of-2-option-non-mandatory)
    + 5.3 [Canonical Claim](#53-canonical-claim)
    + 5.4 [Signature Procedure](#54-signature-procedure)
    + 5.5 [Deterministic Verification Algorithm](#55-deterministic-verification-algorithm)
@@ -145,91 +147,143 @@ By pricing handles in sats **and** meter-time, then recycling the same key for l
 
 ### 5.1 Notation and Pre-requisites
 
-* **BTC** denotes the Bitcoin blockchain mainnet, consensus rules as of Taproot activation (BIP-341/342).
-* **UTXO** = unspent transaction output.
-* **BIP-340** Schnorr public keys are 32-byte X-only values.
-* **BIP-322** “Generic Signatures” define how arbitrary messages are signed and verified against a script path or key path.
-* **CLTV** refers to `OP_CHECKLOCKTIMEVERIFY`.
-* **Big-endian hex** is used for all binary examples.
+* **BTC** Bitcoin main-chain, consensus rules ≥ Taproot (BIP-341/342).  
+* **LN** Lightning Network main-net, BOLT-spec v1.0 or later.  
+* **UTXO** Unspent transaction output on BTC.  
+* **HTLC** Hash-Time-Locked Contract pending in an LN channel; in OrangeCheck we use a *HOLD* HTLC (pre-image withheld).  
+* **BIP-340** Schnorr public keys (32-byte X-only).  
+* **BIP-322** Generic message signatures over either key- or script-path.  
+* **CLTV** `OP_CHECKLOCKTIMEVERIFY`.  
+* **BOLT-12** “Offers” and **onion-message** extensions (used for HTLC status probes).  
+* **Big-endian hex** Encoding for binary examples.
 
-The verifier is assumed to possess:
+A conforming **verifier** MUST have:
 
-1. A fully-validating Bitcoin node or trusted proxy that exposes the RPC method `gettxout(txid string, n int, include_mempool bool) -> json`.
-2. A BIP-322 signature engine for both ECDSA (legacy) and Schnorr (preferred).
+1. **Bitcoin view** – a fully-validating node *or* trusted proxy exposing  
 
-### 5.2 Stake Output Construction
+   `gettxout(txid string, vout int, include_mempool bool) → json`.
+   
+3. **Lightning view** – access to any LN node (local or remote) that can  
 
-The credential’s anchor is a Taproot key-path spend, optionally augmented by a CLTV script path to add a time cost.
+   `lookup_htlc(payment_hash) → {state, value_msat, cltv_expiry}` where `state ∈ {PENDING, FORWARDED, SETTLED}`.
+   
+5. A BIP-322 signature engine for Schnorr (preferred) and legacy ECDSA.
+
+> *Rationale:* Items 1 & 2 let a verifier ask the **same binary question**—“does the bond still exist?”—for either a Taproot UTXO or an LN HOLD HTLC.
+
+---
+
+### 5.2 Stake-Anchor Construction  
+
+An OrangeCheck credential binds a handle to **exactly one live bond**, called the *anchor*.  
+Two anchor types are recognised:
+
+| Anchor type | Chain-footprint | Revocation event | Typical lifespan |
+|-------------|-----------------|------------------|------------------|
+| **Taproot UTXO** | 34-byte `scriptPubKey`, 0-byte witness | UTXO spent (any path) | hours → years |
+| **Lightning HOLD HTLC** | *Zero* until channel closes | HTLC settled, forwarded, or timed-out | minutes → weeks |
+
+Verifiers treat both forms identically: “badge is **valid** if anchor is **still unspent / unsettled**”.
 
 #### 5.2.1 Key-path only (minimal form)
 
 ```text
 scriptPubKey = OP_1 <32-byte-X-only-pubkey>
-value        ≥  dust_limit + relay_fee
+value        ≥ dust_limit + relay_fee
 ```
 
 - `dust_limit` is the prevailing Core policy (currently 546 sats for P2TR).
 - `relay_fee` is the node’s minimum feerate (e.g., 1 sat/vB).
 - There is no `OP_CHECKLOCKTIMEVERIFY` branch; spendability is instant.
 
-#### 5.2.2 Key-path + CLTV script-path (timelocked form)
-
-The Taproot Merkle tree commits to one additional leaf:
+#### 5.2.2 Taproot + CLTV script-path (timelocked form)
 
 ```text
 script_leaf = <lock_height> OP_CHECKLOCKTIMEVERIFY OP_DROP
               <pubkey> OP_CHECKSIG
 ```
 
-The TapTweak is computed per BIP-341; the key-path public key remains the same 32-byte X-only value exposed in `scriptPubKey`.
+_Key-path spend at any time (early revocation) or script-path spend after `lock_height` (natural expiry)._
 
-- `lock_height` is an absolute block height (not relative).
-- The output is spendable via the script path only when `current_height ≥ lock_height`.
-- Key-path spending remains possible at any time, but doing so will dissolve the badge.
+#### 5.2.3 Lightning HOLD-HTLC anchor
 
-Wallets MAY also set a transaction-level `nLockTime`; verifiers MUST ignore it when computing liveness or weight, because it ceases to matter once the funding transaction is mined.
+A badge may reference a pending HOLD invoice instead of a UTXO.
+
+```text
+payment_hash   = 32-byte SHA-256 pre-image hash (hex)
+amount_msat    ≥ 1000          # 1 sat floor
+cltv_expiry    = absolute block-height timeout in the channel
+channel_id     = 64-bit short-channel-id containing the HTLC  (optional*)
+```
+
+_Generation_
+
+1. User (or their LSP) issues a BOLT-12 invoice_request with features=HOLD.
+2. Payer (usually the same user via internal loop) pays the invoice without revealing the pre-image.
+3. The resulting pending HTLC constitutes the bond; its payment_hash becomes the anchor ID.
+
+_Validity check_
+
+```text
+htlc = lookup_htlc(payment_hash)
+valid if htlc.state == PENDING   # not SETTLED or FORWARDED
+        and (block_height < htlc.cltv_expiry)
+```
+
+_Revocation_
+
+- Settle – user reveals pre-image → `state = SETTLED` → badge invalid.
+- Timeout / force-close – HTLC moves on-chain and times out → badge invalid.
+- Forward (malicious LSP) → `state = FORWARDED` → badge invalid.
+
+> *`channel_id` may be omitted; if present, verifiers can fall back to on-chain HTLC lookup on force-close.
+
+#### 5.2.4 Delegated 2-of-2 option (non-mandatory)
+
+For platforms that need seizure-for-cause, the anchor MAY be a 2-of-2 MuSig2 Taproot output or a 2-of-2 Lightning channel where the platform holds the second key. Verifiers ignore the extra key; only liveness matters.
 
 ### 5.3 Canonical Claim
 
-A claim is a UTF-8 JSON document without extra whitespace; keys are sorted lexicographically. Version 1 has four keys:
+A **claim** is a UTF-8 JSON document without extra whitespace; object keys **must** appear in the order shown below so the byte-string is deterministic.
 
-```json
-{
-  "v":1,
-  "h":"@alice",
-  "u":"f0c1ad71ccad6885…1baf:0",
-  "t":1717100000
-}
+| Key | Type | Purpose |
+|-----|------|---------|
+| `v` | `int` | Protocol major version (`1` for this spec). |
+| `h` | `string` | Handle, 1–64 UTF-8 bytes, **no control chars**. |
+| `u` | `string` | Anchor ID: *Taproot* `"<txid>:<vout>"` **or** *Lightning* `"<payment_hash>:ln"`. |
+| `t` | `int` | UNIX epoch seconds when the claim was produced. |
+
+> **Canonical serialisation**  
+> Keys must appear in the sequence **h,t,u,v** to produce the byte-string `C` that is later signed.
+
+```jsonc
+// Taproot example
+{"h":"@alice","t":1717100000,"u":"f0c1ad71ccad6885…1baf:0","v":1}
+
+// Lightning example (bond = HOLD HTLC)
+{"h":"@bob","t":1717100123,"u":"a4b0d2f8c0e7…9f12:ln","v":1}
 ```
 
-- **v** Protocol version (integer).
-- **h** Handle string, 1-64 UTF-8 bytes, MUST NOT contain control chars.
-- **u** Outpoint string, `txid:vout` where `txid` is 32-byte big-endian hex and `vout` is a base-10 index.
-- **t** UNIX timestamp (seconds, UTC) when the claim was produced.
+If `v` is anything other than `1`, the verifier MUST reject. Unknown additional keys are forbidden in version 1; future versions will either increment `v` or introduce an explicit `meta` object.
 
-The canonical serialisation C is produced by:
+### 5.4  Signature Procedure  (BIP-322)
 
-```
-C = utf8_bytes(concat(
-    '{"h":"', h,
-    '","t":', t,
-    ',"u":"', u,
-    '","v":1}'
-))
-```
+Each claim is signed once with **pk**, a BIP-340 X-only public key controlled by the badge owner.
 
-Notice the key order `h,t,u,v`. Version numbers other than `1` MUST cause the verifier to reject.
+| Anchor type | Where verifier gets `pk` |
+|-------------|--------------------------|
+| **Taproot UTXO** | Extract the internal key from the output’s `scriptPubKey`. |
+| **Lightning HTLC** | Read the hex string `k` that *must* accompany an `:ln` anchor inside the claim. |
 
-### 5.4 Signature Procedure (BIP-322)
-
-Let **pk** be the X-only key that controls the _key-path_ of the stake output. The signature domain is:
+> **Signature domain**
 
 ```text
-msg_hash = SHA256(C)
+msg_hash = SHA256(C)          # C = canonical-bytes of the claim
 sig      = BIP322-SIGN(pk, msg_hash)
 ```
 
-The resulting `sig` is 64 bytes for Schnorr or 71-73 bytes DER for ECDSA.
+- `sig` is 64 bytes (Schnorr) or 71-73 bytes DER (legacy ECDSA).
+- When anchor = `…:ln`, the claim MUST carry `"k":"<32-byte-hex-pubkey>"` directly after the `u` field, preserving the key order `h`,`t`,`u`,`k`,`v`.
 
 Publish **(C, sig)** together. For human-readable media (Twitter, Nostr) the signature should be base64url-encoded.
 
