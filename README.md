@@ -10,8 +10,8 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
 1. [Abstract](#1-abstract)
 2. [Protocol Overview](#2-protocol-overview)
 3. [Economic and Philosophical Rationale](#3-economic-and-philosophical-rationale)
-4. [Security and Threat Model](#4-security-and-threat-model)
-5. [Adoption Pathways and Policies](#5-adoption-pathways-and-policies)
+4. [Adoption Pathways and Policies](#5-adoption-pathways-and-policies)
+5. [Security and Threat Model](#4-security-and-threat-model)
 6. [Formal Specification](#6-formal-specification)
    + 6.1 [Notation and Pre-requisites](#61-notation-and-pre-requisites)
    + 6.2 [Stake-Output Construction](#62-stake-output-construction)
@@ -97,24 +97,7 @@ The cost of a Sybil attack now rises linearly with sats at risk, while honest us
 
 ---
 
-## 4. Security & Threat Model  
-
-OrangeCheck’s narrow waist—one UTXO, one signature—shrinks attack surface, but some risks remain:
-
-| Threat | Consequence | Mitigation |
-|--------|-------------|------------|
-| **Key theft** | Thief spends stake → badge evaporates; can impersonate until spend confirms. | Treat stake key like deep-cold storage or 2-of-2 multisig. |
-| **Whale Sybil** | Rich actor slices balance into many outputs to gain influence. | Communities weight non-linearly (√ value, log) or raise thresholds. |
-| **Custodial UTXO reuse** | Exchange re-signs or re-spends a customer’s stake. | Verifiers blacklist known custodial clusters; users fund from self-custody. |
-| **Deep re-org** | Badge flickers if stake tx is rolled back. | Relying apps wait ≥ 12 confirmations when continuity critical. |
-| **DoS via fake claims** | Verifiers flooded with look-ups. | Only process claims submitted through local channels; no global crawl. |
-| **Quantum break** | secp256k1 compromised. | OrangeCheck upgrades in lock-step with any post-quantum Bitcoin fork. |
-
-In every case failure degrades gracefully to first principles: if the coin is gone, the badge is gone; if cost is low, weight can be discounted. Security rises no higher—and sinks no lower—than Bitcoin’s UTXO model plus community policy.
-
----
-
-## 5. Adoption Pathways and Policies  
+## 4. Adoption Pathways and Policies  
 
 Because the stake key can answer any BIP-322 challenge, an OrangeCheck badge is both **identity and login**. The table shows how three very different communities exploit that dual use.
 
@@ -130,6 +113,22 @@ Edge cases follow the same rule of coin-truth: lose the key, re-stake; need a te
 
 By pricing handles in sats and time **and** re-using the same key for live sign-in, OrangeCheck turns identity into a scarce, password-free resource: simple for honest speakers to hold, linearly expensive for spammers to fake.
 
+---
+
+## 5. Security & Threat Model  
+
+OrangeCheck’s narrow waist—one UTXO, one signature—shrinks attack surface, but some risks (non-specific to the protocol) should be considered:
+
+| Threat | Consequence | Mitigation |
+|--------|-------------|------------|
+| **Key theft** | Thief spends stake → badge evaporates; can impersonate until spend confirms. | Treat stake key like deep-cold storage or 2-of-2 multisig. |
+| **Whale Sybil** | Rich actor slices balance into many outputs to gain influence. | Communities weight non-linearly (√ value, log) or raise thresholds. |
+| **Custodial UTXO reuse** | Exchange re-signs or re-spends a customer’s stake. | Verifiers blacklist known custodial clusters; users fund from self-custody. |
+| **Deep re-org** | Badge flickers if stake tx is rolled back. | Relying apps wait ≥ 12 confirmations when continuity critical. |
+| **DoS via fake claims** | Verifiers flooded with look-ups. | Only process claims submitted through local channels; no global crawl. |
+| **Quantum break** | secp256k1 compromised. | OrangeCheck upgrades in lock-step with any post-quantum Bitcoin fork. |
+
+In every case failure degrades gracefully to first principles: if the coin is gone, the badge is gone; if cost is low, weight can be discounted. Security rises no higher—and sinks no lower—than Bitcoin’s UTXO model plus community policy.
 
 ---
 
