@@ -9,9 +9,9 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
 
 1. [Abstract](#1-abstract)
 2. [Protocol Overview](#2-protocol-overview)
-3. [Economic and Philosophical Rationale](#3-economic--philosophical-rationale)
-4. [Adoption Pathways and Policies](#4-adoption-pathways--policies)
-5. [Security and Threat Model](#5-security--threat-model)
+3. [Economic & Philosophical Rationale](#3-economic--philosophical-rationale)
+4. [Adoption Pathways & Policies](#4-adoption-pathways--policies)
+5. [Security & Threat Model](#5-security--threat-model)
 6. [Formal Specification](#6-formal-specification)
    + 6.1 [Notation and Pre-requisites](#61-notation-and-pre-requisites)
    + 6.2 [Stake-Output Construction](#62-stake-output-construction)
