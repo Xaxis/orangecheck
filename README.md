@@ -34,24 +34,34 @@ _By. [@TheBTCViking](https://x.com/TheBTCViking)_
 
 ## 1. Abstract
 
-> The Internet is awash in identities that cost nothing to mint, nothing to burn, and therefore nothing to trust. Platforms respond by selling proprietary check-marks or by harvesting passports, turning spam into rent and privacy into collateral.
-> OrangeCheck offers a simpler bargain: publish a name only if you are willing to lock a measure of Bitcoin behind it, and let the chain itself attest—without intermediaries, tokens, or personal documents—that the lock still holds. The mechanism is disarmingly small. One Taproot output, funded and left unspent, becomes the whole credential; a single BIP-322 signature binds that output to a chosen handle; and a lone `gettxout` query is enough for any service to decide, in real time, whether the bond endures. Should the coins move, the badge dissolves everywhere at once; should a community demand greater assurance, it need only raise the satoshi or timelock threshold it is willing to respect. Every facet of reputation—creation, weighting, and revocation—emerges from the ordinary physics of Bitcoin itself, not from a registrar or a smart-contract VM or separate utility token. By pricing identity in provable energy while leaving its interpretation to the edge, OrangeCheck restores economic gravity to online speech without exacting a toll of data or dependence. It is a protocol in the strict sense of the word: an invariant kernel small enough to fit on a postcard, open enough to be owned by no one, and sturdy enough to let truthful voices stand out against a background of cost-free noise.
+> The web is flooded with cost-free identities, so their promises are priced at zero. **OrangeCheck** restores economic gravity and welds identity to live authentication by requiring every handle to be signed—and continuously controlled—by the key that locks a fresh 34-byte Taproot output, a standard P2TR UTXO that adds no witness overhead or `OP_RETURN` baggage, unlike Ordinal inscriptions whose multi-megabyte witness payloads swell block sizes toward the 4 MB ceiling and distract Bitcoin from its lean monetary purpose. A verifier needs only a BIP-322 challenge and a single `gettxout`: a valid signature plus an unspent coin proves presence and stake, while spending the coin dissolves this "badge" everywhere at once. Built solely from native Bitcoin primitives, OrangeCheck moves intact identities across sites, apps, and protocols without registrars, side-tokens, or personal data, inheriting proof-of-work finality and letting each community map stake to bond, weight, or quorum. It thus transforms portable, cross-platform identity into a first-class function of the world’s most secure ledger, forcing the economic cost of Sybil attacks to scale linearly with sats at risk, allowing committed voices to stand out against cost-free noise.
 
 ---
 
 ## 2. Protocol Overview
 
-The OrangeCheck protocol stands on a deceptively small foundation. An identity is nothing more than a single, unspent output on the Bitcoin blockchain—an amount of value that its owner has deliberately sequestered—and a brief, signed statement that publicly links that output to a chosen handle. Together, these two artifacts form a self-contained credential whose truth can be tested by anyone, anywhere, with one question to the ledger.
+OrangeCheck reduces digital identity to two native Bitcoin facts: **(1)** a fresh pay-to-Taproot output that locks a deliberate sum of sats, and **(2)** a BIP-322 signature that binds that outpoint to a chosen handle. Because the *same* key that guards the stake can answer any BIP-322 challenge, the credential doubles as a reusable login token—identity **and** authentication in one primitive. These two artifacts—no more than a 34-byte `scriptPubKey` on-chain and a tweet-sized JSON blob off-chain—can be verified by any service with a single `gettxout`. The stake is ordinary, witness-free block weight; the claim travels wherever text can travel, so identity rides across websites, apps, and protocols without registrars, side-tokens, or personal data.  
 
-Creation begins when a user generates a fresh Taproot address and funds it with as many satoshis as she is willing to place at risk. Because the address is new and never reused, its sole purpose is to embody the identity; it carries no prior history and betrays no other information. If she wishes to signal a longer-term commitment she may embed a simple Check-Lock-Time instruction, preventing the coins from moving until a future block height. Nothing exotic is required: every modern wallet can craft such a transaction today.
+### How it works
 
-Having planted this monetary flag, the user writes a tiny, canonical message—version number, handle, outpoint, timestamp—and signs it with the same key that can spend the stake. That signed blob may be published wherever she already speaks: appended to a Nostr note, tucked into a DNS-TXT record, pinned to IPFS, or left in the memory of a voluntary gateway. No global registry is introduced, nor is one needed; the claim is self-describing and the chain itself is the only scoreboard.
+| Stage   | Action                                                                  | Purpose                                                          |
+|---------|--------------------------------------------------------------------------|------------------------------------------------------------------|
+| **Lock** | Fund a brand-new Taproot address (optionally timelocked)                | Create an on-chain bond priced in sats **and** time              |
+| **Bind** | Sign `{handle, outpoint, timestamp}` with the same key                  | Prove original custody of the coins                              |
+| **Verify** | Check the signature and call `gettxout`                               | Confirm the badge is genuine **and still funded**                |
+| **Auth** | Wallet signs a one-time nonce with the stake key                        | Live login: proves the handle is controlled *right now*          |
+| **Revoke** | Spend the coin                                                        | Credential auto-expires everywhere—no lists, no appeals          |
 
-Verification is correspondingly austere. A relying service fetches the claim, checks the BIP-322 signature, and then asks a single question of a Bitcoin node: does the referenced outpoint remain unspent, and what value does it hold? If the answer returns a positive balance—and, where relevant, the timelock has not yet expired—the handle is immediately valid. Its “weight” is an objective on-chain fact, yet each application is free to interpret that fact as it pleases: a binary pass/fail, a linear reputation score, a square-root curve that tempers whales, or any future heuristic. Because the interpretation lives outside the protocol, the rules of OrangeCheck never change.
+### Interpretation at the edge
 
-Revocation is automatic and irrevocable. The moment the owner spends the coins, or a deep re-organisation erases them, the next `gettxout` call returns nothing, and every verifier in the world simultaneously recognises the badge has evaporated. There are no blacklists to update, no support channels to petition, and no guardians to persuade. Liveness equals coin-ness: when the value moves, the identity dies, and the cost of resurrection is the cost of a brand-new stake.
+The protocol exposes only two immutable facts—*value* and *liveness*—leaving each community free to set its own policy:
 
-_In four sentences: lock bitcoin; bind it, in public, to a name; let the network itself guarantee both authenticity and weight; and allow the ordinary act of spending to wipe the slate clean. This is the entirety of the OrangeCheck protocol._
+* **Badge** · valid ≥ threshold  
+* **Weight** · linear, square-root, or timelock-boost  
+* **Quorum** · sum of stake required for a vote  
+
+Because cost rises linearly with sats locked, the economic price of Sybil attacks scales in step, while legitimate users stake once and reuse the same credential anywhere a Bitcoin RPC is reachable. Revocation is as simple, instant, and final as spending the coins. In short, OrangeCheck makes portable, cross-platform identity—and its authentication—a first-class, self-auditing function of Bitcoin itself.  
+
 
 ### 2.1 Comparative Landscape
 
