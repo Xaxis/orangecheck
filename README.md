@@ -1,7 +1,6 @@
 # OrangeCheck Protocol
 *A Bitcoin-anchored identity primitive*  
 **White Paper – Draft 1.0 (May 2025)**  
-_By. [@TheBTCViking](https://x.com/TheBTCViking)_
 
 ---
 
